@@ -5,12 +5,12 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { SharedModule } from '../shared/shared.module';
 import ProductsComponent from './products/products.component';
-import { HttpClientModule } from '@angular/common/http';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 
 @NgModule({
   declarations: [AppComponent, ProductsComponent],
-  imports: [BrowserModule, AppRoutingModule, SharedModule, HttpClientModule],
-  providers: [],
+  imports: [BrowserModule, AppRoutingModule, SharedModule],
+  providers: [provideHttpClient(withInterceptorsFromDi())],
   bootstrap: [AppComponent],
 })
 export class AppModule {}
