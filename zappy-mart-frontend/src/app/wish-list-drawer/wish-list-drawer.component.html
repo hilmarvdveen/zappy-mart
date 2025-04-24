@@ -1,0 +1,20 @@
+<div class="wishlist-drawer" [class.open]="true">
+  <div
+    class="wishlist-drawer__overlay"
+    tabindex="0"
+    (click)="closeDrawer()"
+    (keydown.escape)="closeDrawer()"
+  ></div>
+
+  <div class="wishlist-drawer__content">
+    <button class="wishlist-drawer__close" (click)="closeDrawer()">✕</button>
+    <h3 class="wishlist-drawer__title">Mijn Favorieten</h3>
+
+    <ul class="wishlist-drawer__list">
+      <li *ngFor="let product of wishlist()" class="wishlist-drawer__item">
+        <img [src]="product.image" [alt]="product.title" class="wishlist-drawer__image" />
+        <span class="wishlist-drawer__name">{{ product.title }}</span>
+      </li>
+    </ul>
+  </div>
+</div>

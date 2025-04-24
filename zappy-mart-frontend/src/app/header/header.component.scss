@@ -1,0 +1,94 @@
+@media screen and (min-width: 768px) {
+  .desktop-navbar {
+    &__container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 100%;
+    }
+
+    &__logo-link {
+      display: inline-block;
+      line-height: 0;
+
+      height: 60px;
+      width: auto;
+
+      img {
+        height: 60px;
+        display: block;
+        width: auto;
+      }
+    }
+
+    &__nav {
+      display: flex;
+    }
+
+    &__menu {
+      display: flex;
+      padding: 0;
+      margin: 0;
+    }
+
+    &__menu-item {
+      list-style: none;
+      display: inline-block;
+      margin: 1rem;
+      padding: 0.5rem;
+
+      &:hover {
+        background-color: rgba(39, 95, 180, 0.2);
+        border-radius: 0.25rem;
+      }
+
+      &[data-active='true'] a::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        bottom: -1rem;
+        height: 2px;
+        width: 100%;
+        background-color: rgb(66, 0, 128);
+      }
+    }
+
+    &__link {
+      position: relative;
+      text-decoration: none;
+      color: black;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    &__check-wish-list {
+      color: rgba(13, 27, 13, 0.4);
+      background: rgba(199, 130, 187, 0.144);
+      border-radius: 8px;
+      padding: 0.5rem;
+      cursor: pointer;
+      position: relative;
+
+      &:hover {
+        background: rgba(201, 110, 145, 0.226);
+      }
+
+      .wishlist-count-badge {
+        position: absolute;
+        top: -0.5rem;
+        right: -0.5rem;
+        background-color: red;
+        color: white;
+        border-radius: 9999px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        font-weight: bold;
+      }
+    }
+
+    &__icon {
+      width: 20px;
+      display: block;
+    }
+  }
+}

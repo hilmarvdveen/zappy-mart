@@ -4,8 +4,10 @@
   <p class="card__category">{{ product.category }}</p>
   <p class="card__price">€{{ product.price }}</p>
   <button
-  class="card__action-wish-list"
-  [class.card__action-wish-list--active]="inWishlist"
-  (click)="onToggleWishlist()">
-  {{ inWishlist ? 'Verwijder uit favorieten' : 'Voeg toe aan favorieten' }}
-</button></div>
+    class="card__action-wish-list"
+    [class.card__action-wish-list--active]="inWishlist"
+    (click)="onToggleWishlist()"
+  >
+    {{ inWishlist ? 'Verwijder uit favorieten' : 'Voeg toe aan favorieten' }}
+  </button>
+</div>
