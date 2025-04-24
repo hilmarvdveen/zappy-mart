@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { Product } from '../../models/product.model';
 
 @Component({
@@ -9,4 +9,10 @@ import { Product } from '../../models/product.model';
 })
 export default class ProductCardComponent {
   @Input({ required: true }) product!: Product;
+  @Input() inWishlist = false;
+  @Output() toggleWishlist = new EventEmitter<Product>();
+
+  onToggleWishlist() {
+    this.toggleWishlist.emit(this.product);
+  }
 }
