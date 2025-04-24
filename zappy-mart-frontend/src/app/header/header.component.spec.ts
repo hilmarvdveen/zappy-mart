@@ -1,22 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import HeaderComponent from './header.component';
-import { Router } from '@angular/router';
+import { RouterTestingModule } from '@angular/router/testing';
 import { WishListDrawerService } from '../wish-list-drawer/wish-list-drawer.service';
 import { WishListService } from '../../shared/services/wish-list.service';
-import { signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
+import { Router } from '@angular/router';
 
 describe('HeaderComponent', () => {
   let fixture: ComponentFixture<HeaderComponent>;
-  let mockRouter: Partial<Router>;
   let mockDrawerService: Partial<WishListDrawerService>;
   let mockWishListService: Partial<WishListService>;
 
   beforeEach(async () => {
-    mockRouter = {
-      url: '/blog',
-    };
-
     mockDrawerService = {
       toggle: jest.fn(),
     };
@@ -26,9 +22,9 @@ describe('HeaderComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      declarations: [HeaderComponent],
+      declarations: [HeaderComponent, DummyComponent],
+      imports: [RouterTestingModule.withRoutes([{ path: 'over-ons', component: DummyComponent }])],
       providers: [
-        { provide: Router, useValue: mockRouter },
         { provide: WishListDrawerService, useValue: mockDrawerService },
         { provide: WishListService, useValue: mockWishListService },
       ],
@@ -40,17 +36,17 @@ describe('HeaderComponent', () => {
 
   it('should render all menu links', () => {
     const links = fixture.debugElement.queryAll(By.css('.desktop-navbar__link'));
-    expect(links.length).toBe(3);
-    expect(links.map((link) => link.nativeElement.textContent.trim())).toEqual([
-      'Blog',
-      'Over ons',
-      'Contact',
-    ]);
+    expect(links.length).toBe(1);
+    expect(links[0].nativeElement.textContent.trim()).toBe('Over ons');
   });
 
-  it('should set the correct active link', () => {
+  it('should set the correct active link', async () => {
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/over-ons');
+    fixture.detectChanges();
+
     const activeItem = fixture.debugElement.query(By.css('[data-active="true"]'));
-    expect(activeItem.nativeElement.textContent).toContain('Blog');
+    expect(activeItem?.nativeElement.textContent).toContain('Over ons');
   });
 
   it('should display the wishlist count', () => {
@@ -64,3 +60,10 @@ describe('HeaderComponent', () => {
     expect(mockDrawerService.toggle).toHaveBeenCalled();
   });
 });
+
+@Component({
+  selector: 'app-dummy',
+  template: '<p>Dummy</p>',
+  standalone: false,
+})
+class DummyComponent {}

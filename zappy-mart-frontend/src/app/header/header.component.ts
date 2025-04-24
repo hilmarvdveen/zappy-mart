@@ -11,9 +11,7 @@ import { WishListService } from '../../shared/services/wish-list.service';
 })
 export default class HeaderComponent {
   menuLinks = [
-    { path: '/blog', label: 'Blog' },
     { path: '/over-ons', label: 'Over ons' },
-    { path: '/contact', label: 'Contact' },
   ];
 
   public readonly count;

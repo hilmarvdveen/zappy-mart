@@ -5,8 +5,8 @@ import ProductCardComponent from './components/product-card/product-card.compone
 import { RouterModule } from '@angular/router';
 
 @NgModule({
-  declarations: [HeaderComponent, ProductCardComponent],
+  declarations: [ProductCardComponent],
   imports: [CommonModule, RouterModule],
-  exports: [HeaderComponent, ProductCardComponent, CommonModule, RouterModule],
+  exports: [ ProductCardComponent, CommonModule, RouterModule],
 })
 export class SharedModule {}

@@ -3,10 +3,10 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { signal } from '@angular/core';
 
-import { ProductStoreService } from '../../shared/services/product-signal-store.service';
 import { WishListService } from '../../shared/services/wish-list.service';
 import { Product } from '../../shared/models/product.model';
 import ProductsComponent from './products.component';
+import { ProductSignalStoreService } from '../../shared/services/product-signal-store.service';
 
 @Component({
   selector: 'app-product-card',
@@ -35,7 +35,7 @@ describe('ProductsComponent', () => {
     },
   ];
 
-  const mockStore: Partial<ProductStoreService> = {
+  const mockStore: Partial<ProductSignalStoreService> = {
     products: signal(mockProducts),
     loading: signal(false),
     errorMessage: signal(''),
@@ -51,7 +51,7 @@ describe('ProductsComponent', () => {
     await TestBed.configureTestingModule({
       declarations: [ProductsComponent, MockProductCardComponent],
       providers: [
-        { provide: ProductStoreService, useValue: mockStore },
+        { provide: ProductSignalStoreService, useValue: mockStore },
         { provide: WishListService, useValue: mockWishlist },
       ],
     }).compileComponents();

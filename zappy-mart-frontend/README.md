@@ -1,59 +1,100 @@
-# ZappyMartFrontend
+# ZappyMart Frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.9.
+ZappyMart is a modern Angular web application for browsing and managing a product catalog with a wishlist feature. It showcases reactive state management using Angular Signals, a clean modular structure, and custom UI styling via SCSS and BEM conventions.
 
-## Development server
+## Project Structure
 
-To start a local development server, run:
+src/
+├── app/
+│ ├── header/ # Top navigation with wishlist access
+│
+├── home/ # Homepage view
+│ ├── over-ons/ # About us page
+│ ├── products/ # Displays product listings
+│ └── wish-list-drawer/ # Side drawer showing wishlist items
+│ ├── shared/ # Reusable components, models, and services
+└── assets/ # Static assets like fonts and images
 
-```bash
-ng serve
-```
+## Features
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+- **Wishlist Functionality** – Add or remove products from a persistent wishlist
+- **Signals-based Store** – Efficient state management using Angular's signal API
+- **Component Communication** – Uses `@Input()` and `@Output()` for interaction between elements
+- **SCSS & BEM Styling** – Maintainable styles using SCSS and BEM methodology
+- **Unit Testing** – Fully tested components using Jest
 
-## Code scaffolding
+## Getting Started
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+### Development server
 
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+Install dependencies and start the development server:
 
 ```bash
-ng test
+npm install
+npm start
+
+Navigate to http://localhost:4200. The application will auto-reload on changes.
+Build
+
+To compile the project for production:
+
+npm run build
+
+Build artifacts will be stored in the dist/ directory.
+Testing
+
+Run unit tests using Jest:
+
+npm test
+
+Watch mode:
+
+npm run test:watch
+
+Generate coverage report:
+
+npm run test:coverage
+
+Code Formatting
+
+Format all files with Prettier:
+
+npm run format
+
+Linting
+
+Run linter:
+
+npm run lint
+
+Fix lint issues automatically:
+
+npm run lint:fix
+
+Technologies Used
+
+    Angular 19
+
+    Jest for testing
+
+    Angular Signals for state management
+
+    SCSS for styling
+
+    BEM naming convention
+
+    Zone.js
+
+    Prettier & ESLint
+
+Routes
+Path	Description
+/	Home page
+/over-ons	About us page
+Assets & Fonts
+
+Custom logos and fonts are stored under src/assets/.
+Wishlist Drawer
+
+The wishlist drawer can be toggled from the top navigation. It displays the products added to the wishlist and includes a counter badge. This feature is managed via a centralized service.
 ```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.

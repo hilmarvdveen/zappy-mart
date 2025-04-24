@@ -3,7 +3,7 @@ import { ProductApiService } from './product-api.service';
 import { Product } from '../models/product.model';
 
 @Injectable({ providedIn: 'root' })
-export class ProductStoreService {
+export class ProductSignalStoreService {
   private readonly _products = signal<Product[]>([]);
   readonly products = this._products.asReadonly();
 

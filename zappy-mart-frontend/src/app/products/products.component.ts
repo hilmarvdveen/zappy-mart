@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
-import { ProductStoreService } from '../../shared/services/product-signal-store.service';
 import { Product } from '../../shared/models/product.model';
 import { WishListService } from '../../shared/services/wish-list.service';
+import { ProductSignalStoreService } from '../../shared/services/product-signal-store.service';
 
 @Component({
   selector: 'app-products',
@@ -16,12 +16,12 @@ export default class ProductsComponent {
   public readonly wishList;
 
   constructor(
-    private readonly productStoreService: ProductStoreService,
+    private readonly productSignalStoreService: ProductSignalStoreService,
     private readonly wishListService: WishListService
   ) {
-    this.products = this.productStoreService.products;
-    this.loading = this.productStoreService.loading;
-    this.errorMessage = this.productStoreService.errorMessage;
+    this.products = this.productSignalStoreService.products;
+    this.loading = this.productSignalStoreService.loading;
+    this.errorMessage = this.productSignalStoreService.errorMessage;
     this.wishList = this.wishListService.wishlist;
   }
 
