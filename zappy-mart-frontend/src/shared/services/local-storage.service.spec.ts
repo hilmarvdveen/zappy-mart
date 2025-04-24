@@ -1,5 +1,4 @@
-import { LocalStorageService } from "./local-storage.service";
-
+import { LocalStorageService } from './local-storage.service';
 
 describe('LocalStorageService', () => {
   let service: LocalStorageService;
