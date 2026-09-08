@@ -1,0 +1,9 @@
+{
+  "data": {
+    "logout": {
+      "success": true,
+      "errors": []
+    }
+  },
+  "errors": []
+}

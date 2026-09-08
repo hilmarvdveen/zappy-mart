@@ -1,0 +1,31 @@
+mutation PromotionApplyExhausted($code: String!) {
+  applyPromotionCode(code: $code) {
+    errors {
+      code
+      field
+    }
+    cart {
+      id
+      promotion {
+        code
+        kind
+        discount {
+          amount
+          currency
+        }
+      }
+      subtotal {
+        amount
+        currency
+      }
+      shipping {
+        amount
+        currency
+      }
+      total {
+        amount
+        currency
+      }
+    }
+  }
+}

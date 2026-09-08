@@ -1,0 +1,12 @@
+mutation WishlistRemove($productId: ID!) {
+  removeFromWishlist(productId: $productId) {
+    products {
+      id
+      slug
+    }
+    errors {
+      code
+      field
+    }
+  }
+}

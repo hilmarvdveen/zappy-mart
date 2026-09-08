@@ -1,0 +1,12 @@
+mutation OrderPlaceEmptyCart($idempotencyKey: String!) {
+  placeOrder(idempotencyKey: $idempotencyKey) {
+    order {
+      id
+      number
+    }
+    errors {
+      code
+      field
+    }
+  }
+}

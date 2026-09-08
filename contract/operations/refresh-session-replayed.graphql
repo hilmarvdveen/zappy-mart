@@ -1,0 +1,14 @@
+mutation RefreshSessionReplayed {
+  refreshSession {
+    accessToken
+    accessTokenExpiresAt
+    customer {
+      id
+      email
+    }
+    errors {
+      code
+      field
+    }
+  }
+}

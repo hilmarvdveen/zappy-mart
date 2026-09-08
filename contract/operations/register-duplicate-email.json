@@ -1,0 +1,7 @@
+{
+  "input": {
+    "email": "jane@example.com",
+    "name": "Jane Doe",
+    "password": "conformance runner password"
+  }
+}

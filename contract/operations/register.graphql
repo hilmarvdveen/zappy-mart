@@ -1,0 +1,19 @@
+mutation Register($input: RegisterInput!) {
+  register(input: $input) {
+    accessToken
+    accessTokenExpiresAt
+    customer {
+      id
+      email
+      name
+      createdAt
+      wishlist {
+        id
+      }
+    }
+    errors {
+      code
+      field
+    }
+  }
+}

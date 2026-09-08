@@ -1,0 +1,14 @@
+mutation RegisterDuplicateEmail($input: RegisterInput!) {
+  register(input: $input) {
+    accessToken
+    accessTokenExpiresAt
+    customer {
+      id
+      email
+    }
+    errors {
+      code
+      field
+    }
+  }
+}

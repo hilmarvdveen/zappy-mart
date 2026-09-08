@@ -198,8 +198,9 @@ application, and the shared suites pass where they apply.
 |---|---|---|---|---|
 | Z0 | The skeleton: repository, principles, domain, contract 0.1, versions, this backlog | | 2 | done 8 September 2026 |
 | Z1 | Verify and pin the missing versions (Hot Chocolate, EF Core, urql, gql.tada, Apollo Angular, Playwright, Vitest, PostgreSQL, Argon2 libraries per language) into `docs/versions.md` | Z0 | 1 | done 8 September 2026 |
-| Z2 | The contract finished: schema 1.0, seed data, conformance operations and expected answers, the runner | Z1 | 4 | open |
-| Z3 | The C# backend: hexagonal monolith, five modules, EF Core on PostgreSQL, Hot Chocolate, the security model, unit and integration tests, conformance green, README walk through | Z2 | 12 | open |
+| Z2 | The contract finished: schema 1.0, seed data, conformance operations and expected answers, the runner | Z1 | 4 | done 9 September 2026: 33 scenarios in one session, 49 runner tests, five settled rules in `contract/README.md` |
+| Z2c | `tools/mock-server`, an in-memory implementation of the whole contract over the seed on port 4000: the first target the runner was proven against (33 of 33) and the backend the three frontends develop against until the real ones are green | Z2 | 3 | done 9 September 2026 |
+| Z3 | The C# backend: hexagonal monolith, five modules, EF Core on SQLite by default with a PostgreSQL profile, Hot Chocolate, the security model, unit and integration tests, conformance green against schema 1.0, README walk through | Z2 | 12 | in progress since 9 September 2026 |
 | Z4 | `docs/patterns.md` and `docs/security.md` written against the C# code with file paths | Z3 | 3 | open |
 | Z5 | The React Router frontend against the C# backend, end to end suite, README | Z3 | 8 | open |
 | Z6 | The Java backend, same modules, same tests, conformance green, README | Z2 | 10 | open |

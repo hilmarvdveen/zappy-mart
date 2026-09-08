@@ -1,0 +1,17 @@
+{
+  "data": {
+    "register": {
+      "accessToken": "@token",
+      "accessTokenExpiresAt": "@dateTime",
+      "customer": {
+        "id": "@id",
+        "email": "sam@example.com",
+        "name": "Sam Rivers",
+        "createdAt": "@dateTime",
+        "wishlist": []
+      },
+      "errors": []
+    }
+  },
+  "errors": []
+}

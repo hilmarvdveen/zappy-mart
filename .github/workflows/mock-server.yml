@@ -1,0 +1,30 @@
+name: Mock server
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tools/mock-server/**"
+      - "contract/**"
+      - ".github/workflows/mock-server.yml"
+  pull_request:
+    paths:
+      - "tools/mock-server/**"
+      - "contract/**"
+      - ".github/workflows/mock-server.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/mock-server
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: tools/mock-server/package-lock.json
+      - run: npm ci
+      - run: node --test

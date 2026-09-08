@@ -1,0 +1,15 @@
+mutation MutationWithoutOrigin($productId: ID!, $quantity: Int!) {
+  addToCart(productId: $productId, quantity: $quantity) {
+    cart {
+      id
+      total {
+        amount
+        currency
+      }
+    }
+    errors {
+      code
+      field
+    }
+  }
+}

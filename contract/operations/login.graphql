@@ -1,0 +1,26 @@
+mutation Login($input: LoginInput!) {
+  login(input: $input) {
+    accessToken
+    accessTokenExpiresAt
+    customer {
+      id
+      email
+      name
+      createdAt
+      sessions {
+        id
+        device
+        createdAt
+        lastUsedAt
+        current
+      }
+      wishlist {
+        id
+      }
+    }
+    errors {
+      code
+      field
+    }
+  }
+}

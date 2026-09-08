@@ -1,0 +1,13 @@
+mutation RevokeSessionSignedOut($sessionId: ID!) {
+  revokeSession(sessionId: $sessionId) {
+    sessions {
+      id
+      device
+      current
+    }
+    errors {
+      code
+      field
+    }
+  }
+}

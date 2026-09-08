@@ -1,0 +1,37 @@
+query OrderById($id: ID!) {
+  order(id: $id) {
+    id
+    number
+    status
+    lines {
+      productName
+      unitPrice {
+        amount
+        currency
+      }
+      quantity
+      lineTotal {
+        amount
+        currency
+      }
+    }
+    promotionCode
+    subtotal {
+      amount
+      currency
+    }
+    discount {
+      amount
+      currency
+    }
+    shipping {
+      amount
+      currency
+    }
+    total {
+      amount
+      currency
+    }
+    placedAt
+  }
+}

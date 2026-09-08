@@ -1,0 +1,14 @@
+{
+  "data": {
+    "placeOrder": {
+      "order": null,
+      "errors": [
+        {
+          "code": "CART_EMPTY",
+          "field": null
+        }
+      ]
+    }
+  },
+  "errors": []
+}

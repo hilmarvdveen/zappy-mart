@@ -1,0 +1,29 @@
+mutation WishlistMergeOnLogin($productId: ID!, $input: LoginInput!) {
+  addToWishlist(productId: $productId) {
+    products {
+      id
+      slug
+    }
+    errors {
+      code
+      field
+    }
+  }
+  login(input: $input) {
+    accessToken
+    accessTokenExpiresAt
+    customer {
+      id
+      email
+      name
+      wishlist {
+        id
+        slug
+      }
+    }
+    errors {
+      code
+      field
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "data": {
+    "product": {
+      "id": "product-03",
+      "name": "Mens Cotton Jacket",
+      "slug": "mens-cotton-jacket",
+      "description": "Great outerwear jackets for spring, autumn and winter, suitable for many occasions such as working, hiking, camping, mountain and rock climbing, cycling, travelling or other outdoors. A good gift choice for you or a family member, and a warm hearted present for a father, a husband or a son.",
+      "price": { "amount": 5599, "currency": "EUR" },
+      "stock": 8,
+      "imageUrl": "/images/products/mens-cotton-jacket.svg",
+      "category": {
+        "id": "category-mens-clothing",
+        "name": "Men's clothing",
+        "slug": "mens-clothing"
+      }
+    }
+  },
+  "errors": []
+}

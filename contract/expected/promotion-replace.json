@@ -1,0 +1,19 @@
+{
+  "data": {
+    "applyPromotionCode": {
+      "errors": [],
+      "cart": {
+        "id": "@id",
+        "promotion": {
+          "code": "FREESHIP",
+          "kind": "FREE_SHIPPING",
+          "discount": { "amount": 0, "currency": "EUR" }
+        },
+        "subtotal": { "amount": 2385, "currency": "EUR" },
+        "shipping": { "amount": 0, "currency": "EUR" },
+        "total": { "amount": 2385, "currency": "EUR" }
+      }
+    }
+  },
+  "errors": []
+}

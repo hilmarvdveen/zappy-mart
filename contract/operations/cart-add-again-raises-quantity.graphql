@@ -1,0 +1,50 @@
+mutation CartAddAgainRaisesQuantity($productId: ID!, $quantity: Int!) {
+  addToCart(productId: $productId, quantity: $quantity) {
+    availableStock
+    errors {
+      code
+      field
+    }
+    cart {
+      id
+      lines {
+        id
+        quantity
+        lineTotal {
+          amount
+          currency
+        }
+        product {
+          id
+          slug
+          price {
+            amount
+            currency
+          }
+          stock
+        }
+      }
+      promotion {
+        code
+        kind
+        discount {
+          amount
+          currency
+        }
+      }
+      subtotal {
+        amount
+        currency
+      }
+      shipping {
+        amount
+        currency
+      }
+      total {
+        amount
+        currency
+      }
+      updatedAt
+    }
+  }
+}

@@ -13,7 +13,10 @@ holds the private key, anyone can verify with the public one), valid for
 fifteen minutes, carrying the customer id, the session id and the expiry.
 Nothing personal is in it, and it is never stored on the server. Every
 GraphQL request that needs a customer sends it in the `Authorization`
-header as a bearer token. A backend verifies it without a database read.
+header as a bearer token. A backend verifies the signature without a
+database read and checks the session id the token carries against the
+session table, or a cache of it, so a logout or a revocation takes effect
+at once.
 
 **The refresh token** is random and opaque, valid for thirty days, stored
 hashed in the `sessions` table together with the customer id, the device

@@ -1,0 +1,14 @@
+{
+  "data": {
+    "refreshSession": {
+      "accessToken": "@token",
+      "accessTokenExpiresAt": "@dateTime",
+      "customer": {
+        "id": "customer-01",
+        "email": "jane@example.com"
+      },
+      "errors": []
+    }
+  },
+  "errors": []
+}

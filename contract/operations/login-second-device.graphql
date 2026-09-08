@@ -1,0 +1,19 @@
+mutation LoginSecondDevice($input: LoginInput!) {
+  login(input: $input) {
+    accessToken
+    accessTokenExpiresAt
+    customer {
+      id
+      email
+      sessions {
+        id
+        device
+        current
+      }
+    }
+    errors {
+      code
+      field
+    }
+  }
+}

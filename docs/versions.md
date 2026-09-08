@@ -70,6 +70,8 @@ the Spring Boot 4.1.1 dependency bill of materials on 8 September 2026.
 | Angular tooling | `@angular/cli` 22.1.7, `angular-eslint` 22.5.0, `typescript-eslint` 8.70.0, `prettier` 3.9.6 | | npm |
 | jest-preset-angular | 17.0.0, Angular 20 to 22 with Jest 30 | kept in `frontends/angular`, see the Angular unit test runner row above | npm |
 | graphql for Apollo | 16.14.2, the `latest-16` tag. Apollo Server 5.5.1, `@apollo/subgraph` 2.15.0, `@apollo/gateway` 2.14.4 and `@apollo/composition` 2.14.4 all declare `graphql` 16 as their peer, so the mock server and the Node backend run 16 and only the conformance runner runs 17 | verified 9 September 2026 | npm |
+| jose | 6.2.12, the JSON Web Token library of the mock server (HS256 with a random secret per start) and of the Node subgraphs (RS256 against the JWKS endpoint) | verified 9 September 2026 | npm |
+| Apollo Server 5 and Express | 5.5.1 ships no Express integration package of its own. The mock server calls `executeHTTPGraphQLRequest` from an Express 5.2.1 route, because `startStandaloneServer` fixes CORS to every origin without credentials, which browser cookies from the frontend ports cannot cross | verified 9 September 2026 | npm, the Apollo Server documentation |
 | Apollo Federation, JavaScript | `@apollo/subgraph` 2.15.0, `@apollo/gateway` 2.14.4, `@apollo/composition` 2.14.4 | the gateway serves the composed supergraph in this repository because Norton on the development laptop blocks the Rust `router.exe` that `@apollo/router` downloads (and `rover.exe` from `@apollo/rover` 0.41.0). The same supergraph file runs under Apollo Router unchanged | npm |
 
 ## Still to verify at the item that first needs it

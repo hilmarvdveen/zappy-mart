@@ -1,0 +1,18 @@
+{
+  "name": "zappy-mart-conformance",
+  "version": "1.0.0",
+  "description": "Runs the Zappy Mart contract operations against a backend and compares the answers with the expected files",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "test": "node --test",
+    "conformance": "node run.mjs"
+  },
+  "dependencies": {
+    "graphql": "17.0.2"
+  }
+}

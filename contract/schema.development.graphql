@@ -40,9 +40,9 @@ extend type Mutation {
   is thrown away.
 
   It is available only in a backend's development profile. The
-  conformance runner in `tools/conformance/` calls it before each
-  scenario, so every run starts from the same data and the expected
-  answers in `contract/expected/` hold whatever ran before them.
+  conformance runner in `tools/conformance/` calls it once at the start
+  of a run, so every run starts from the same data and the scenarios
+  build on one another in their fixed order.
 
   It takes no arguments, because the seed is the seed: there is one
   shared set of data and every backend answers the conformance operations

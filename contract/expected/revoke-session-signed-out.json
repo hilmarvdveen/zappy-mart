@@ -1,0 +1,14 @@
+{
+  "data": {
+    "revokeSession": {
+      "sessions": [],
+      "errors": [
+        {
+          "code": "NOT_AUTHENTICATED",
+          "field": null
+        }
+      ]
+    }
+  },
+  "errors": []
+}

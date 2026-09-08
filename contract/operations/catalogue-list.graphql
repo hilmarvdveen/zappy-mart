@@ -1,0 +1,28 @@
+query CatalogueList($first: Int!, $after: String) {
+  products(first: $first, after: $after) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    edges {
+      cursor
+      node {
+        id
+        name
+        slug
+        price {
+          amount
+          currency
+        }
+        stock
+        imageUrl
+        category {
+          id
+          name
+          slug
+        }
+      }
+    }
+  }
+}

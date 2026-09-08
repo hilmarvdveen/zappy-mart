@@ -1,0 +1,7 @@
+{
+  "input": {
+    "email": "JANE@example.com",
+    "password": "correct horse battery staple",
+    "device": "Conformance runner"
+  }
+}

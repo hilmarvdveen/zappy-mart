@@ -1,0 +1,28 @@
+{
+  "data": {
+    "orders": {
+      "totalCount": 1,
+      "pageInfo": {
+        "hasNextPage": false,
+        "endCursor": "@cursor"
+      },
+      "edges": [
+        {
+          "cursor": "@cursor",
+          "node": {
+            "id": "@id",
+            "number": "@id",
+            "status": "PAID",
+            "promotionCode": null,
+            "subtotal": { "amount": 2385, "currency": "EUR" },
+            "discount": { "amount": 0, "currency": "EUR" },
+            "shipping": { "amount": 495, "currency": "EUR" },
+            "total": { "amount": 2880, "currency": "EUR" },
+            "placedAt": "@dateTime"
+          }
+        }
+      ]
+    }
+  },
+  "errors": []
+}

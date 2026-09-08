@@ -1,0 +1,24 @@
+{
+  "data": {
+    "order": {
+      "id": "@id",
+      "number": "@id",
+      "status": "PAID",
+      "lines": [
+        {
+          "productName": "Opna Women's Short Sleeve Moisture",
+          "unitPrice": { "amount": 795, "currency": "EUR" },
+          "quantity": 3,
+          "lineTotal": { "amount": 2385, "currency": "EUR" }
+        }
+      ],
+      "promotionCode": null,
+      "subtotal": { "amount": 2385, "currency": "EUR" },
+      "discount": { "amount": 0, "currency": "EUR" },
+      "shipping": { "amount": 495, "currency": "EUR" },
+      "total": { "amount": 2880, "currency": "EUR" },
+      "placedAt": "@dateTime"
+    }
+  },
+  "errors": []
+}

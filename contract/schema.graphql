@@ -333,6 +333,7 @@ type Cart {
   What shipping costs for this cart. The rule is in the Ordering section
   of `docs/domain.md`: shipping is 495 cents, and it is zero when the
   subtotal is 5000 cents or more or when a free shipping code applies.
+  An empty cart has no shipping charge.
   """
   shipping: Money!
 
@@ -581,8 +582,9 @@ type Customer {
 
   """
   The products the customer saved to find again, newest first. An
-  anonymous visitor keeps a wishlist in the browser, and that list merges
-  into this one on login.
+  anonymous visitor's wishlist is kept against the `zappy_cart` cookie,
+  like the cart, and merges into this one on login by adding and never
+  replacing.
   """
   wishlist: [Product!]!
 }
@@ -861,8 +863,7 @@ type WishlistPayload {
   products: [Product!]!
 
   """
-  Empty when the change was made. Otherwise `NOT_AUTHENTICATED` or
-  `PRODUCT_NOT_FOUND`.
+  Empty when the change was made. Otherwise `PRODUCT_NOT_FOUND`.
   """
   errors: [UserError!]!
 }
@@ -929,9 +930,9 @@ type Query {
   cart: Cart!
 
   """
-  The signed in customer's wishlist, newest first. It is an empty list
-  when nobody is signed in, because an anonymous visitor's wishlist lives
-  in the browser and merges into the customer's on login.
+  The visitor's wishlist, newest first. For an anonymous visitor it is the
+  wishlist kept against the `zappy_cart` cookie, like the cart, and it
+  merges into the customer's on login by adding and never replacing.
   """
   wishlist: [Product!]!
 
@@ -1026,7 +1027,7 @@ Everything a client changes. Every field answers with a payload that
 carries `errors`, so a refusal a rule caused is data and not a GraphQL
 error.
 
-Every mutation that authenticates with a cookie is refused before the
+Every mutation, with or without a cookie, is refused before the
 resolver runs when the `Origin` header is missing or is not an allowed
 origin. That check sits at the transport and answers a GraphQL error and
 not a `UserError`, because no change to the input puts it right.
@@ -1068,8 +1069,9 @@ type Mutation {
 
   """
   Revokes the session the request is made from and clears the refresh
-  cookie. The access token stays valid until it expires, at most fifteen
-  minutes, which is why a client throws it away as well.
+  cookie. The access token is refused from that moment on, because every
+  request checks the session the token names, and a client throws it away
+  as well.
   """
   logout: LogoutPayload!
 
@@ -1152,7 +1154,7 @@ type Mutation {
   removePromotionCode: CartPayload!
 
   """
-  Adds a product to the signed in customer's wishlist. A product that is
+  Adds a product to the visitor's wishlist, anonymous or signed in. A product that is
   already on the wishlist answers with the unchanged wishlist and no
   errors, so a client calls this without checking first.
   """
@@ -1164,7 +1166,7 @@ type Mutation {
   ): WishlistPayload!
 
   """
-  Removes a product from the signed in customer's wishlist. A product
+  Removes a product from the visitor's wishlist, anonymous or signed in. A product
   that is not on the wishlist answers with the unchanged wishlist and no
   errors.
   """

@@ -53,7 +53,7 @@ Owns placing an order from a cart and the order history.
   placed. A later price change does not touch it.
 - Shipping is a charge and nothing else. It is 495 cents. It is zero when
   the subtotal is 5000 cents or more, and it is zero when a free shipping
-  code applies. The charge sits on the cart while the visitor shops and is
+  code applies. An empty cart has no shipping charge. The charge sits on the cart while the visitor shops and is
   copied onto the order when the order is placed. Addresses, carriers and
   delivery dates stay out of scope, so this one amount is the whole of
   shipping in this store. `Cart.shipping` and `Order.shipping` in
@@ -80,9 +80,9 @@ Owns customers, registration, login, sessions and the wishlist.
 - A login creates a session. A session can be listed and revoked by its
   customer. The token model is in `security.md`.
 - A wishlist is a set of products a customer wants to find again. An
-  anonymous visitor keeps a wishlist in the browser, as the Angular
-  application did from the start, and it merges into the customer's
-  wishlist on login, the same way the cart does.
+  anonymous visitor's wishlist is kept against the `zappy_cart` cookie,
+  like the cart, and it merges into the customer's wishlist on login by
+  adding and never replacing, the same way the cart does.
 
 ## Shared kernel
 

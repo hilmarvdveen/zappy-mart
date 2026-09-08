@@ -1,0 +1,16 @@
+{
+  "data": {
+    "register": {
+      "accessToken": null,
+      "accessTokenExpiresAt": null,
+      "customer": null,
+      "errors": [
+        {
+          "code": "EMAIL_TAKEN",
+          "field": "input.email"
+        }
+      ]
+    }
+  },
+  "errors": []
+}

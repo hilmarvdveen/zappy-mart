@@ -1,0 +1,18 @@
+mutation WishlistAdd($productId: ID!) {
+  addToWishlist(productId: $productId) {
+    products {
+      id
+      name
+      slug
+      price {
+        amount
+        currency
+      }
+      stock
+    }
+    errors {
+      code
+      field
+    }
+  }
+}

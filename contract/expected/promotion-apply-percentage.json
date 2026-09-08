@@ -1,0 +1,31 @@
+{
+  "data": {
+    "applyPromotionCode": {
+      "errors": [],
+      "cart": {
+        "id": "@id",
+        "lines": [
+          {
+            "id": "@id",
+            "quantity": 3,
+            "lineTotal": { "amount": 2385, "currency": "EUR" },
+            "product": {
+              "id": "product-19",
+              "slug": "opna-womens-short-sleeve-moisture"
+            }
+          }
+        ],
+        "promotion": {
+          "code": "WELCOME10",
+          "kind": "PERCENTAGE",
+          "discount": { "amount": 239, "currency": "EUR" }
+        },
+        "subtotal": { "amount": 2385, "currency": "EUR" },
+        "shipping": { "amount": 495, "currency": "EUR" },
+        "total": { "amount": 2641, "currency": "EUR" },
+        "updatedAt": "@dateTime"
+      }
+    }
+  },
+  "errors": []
+}

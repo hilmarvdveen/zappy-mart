@@ -1,0 +1,35 @@
+query OrdersList($first: Int!, $after: String) {
+  orders(first: $first, after: $after) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    edges {
+      cursor
+      node {
+        id
+        number
+        status
+        promotionCode
+        subtotal {
+          amount
+          currency
+        }
+        discount {
+          amount
+          currency
+        }
+        shipping {
+          amount
+          currency
+        }
+        total {
+          amount
+          currency
+        }
+        placedAt
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "data": {
+    "login": {
+      "accessToken": "@token",
+      "accessTokenExpiresAt": "@dateTime",
+      "customer": {
+        "id": "customer-01",
+        "email": "jane@example.com",
+        "sessions": [
+          {
+            "id": "@id",
+            "device": "phone",
+            "current": true
+          },
+          {
+            "id": "@id",
+            "device": "laptop",
+            "current": false
+          }
+        ]
+      },
+      "errors": []
+    }
+  },
+  "errors": []
+}

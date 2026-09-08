@@ -1,0 +1,94 @@
+{
+  "data": {
+    "products": {
+      "totalCount": 20,
+      "pageInfo": {
+        "hasNextPage": true,
+        "endCursor": "@cursor"
+      },
+      "edges": [
+        {
+          "cursor": "@cursor",
+          "node": {
+            "id": "product-01",
+            "name": "Fjallraven Foldsack No. 1 Backpack, Fits 15 Laptops",
+            "slug": "fjallraven-foldsack-no-1-backpack",
+            "price": { "amount": 10995, "currency": "EUR" },
+            "stock": 12,
+            "imageUrl": "/images/products/fjallraven-foldsack-no-1-backpack.svg",
+            "category": {
+              "id": "category-mens-clothing",
+              "name": "Men's clothing",
+              "slug": "mens-clothing"
+            }
+          }
+        },
+        {
+          "cursor": "@cursor",
+          "node": {
+            "id": "product-02",
+            "name": "Mens Casual Premium Slim Fit T-Shirts",
+            "slug": "mens-casual-premium-slim-fit-t-shirts",
+            "price": { "amount": 2230, "currency": "EUR" },
+            "stock": 25,
+            "imageUrl": "/images/products/mens-casual-premium-slim-fit-t-shirts.svg",
+            "category": {
+              "id": "category-mens-clothing",
+              "name": "Men's clothing",
+              "slug": "mens-clothing"
+            }
+          }
+        },
+        {
+          "cursor": "@cursor",
+          "node": {
+            "id": "product-03",
+            "name": "Mens Cotton Jacket",
+            "slug": "mens-cotton-jacket",
+            "price": { "amount": 5599, "currency": "EUR" },
+            "stock": 8,
+            "imageUrl": "/images/products/mens-cotton-jacket.svg",
+            "category": {
+              "id": "category-mens-clothing",
+              "name": "Men's clothing",
+              "slug": "mens-clothing"
+            }
+          }
+        },
+        {
+          "cursor": "@cursor",
+          "node": {
+            "id": "product-04",
+            "name": "Mens Casual Slim Fit",
+            "slug": "mens-casual-slim-fit",
+            "price": { "amount": 1599, "currency": "EUR" },
+            "stock": 18,
+            "imageUrl": "/images/products/mens-casual-slim-fit.svg",
+            "category": {
+              "id": "category-mens-clothing",
+              "name": "Men's clothing",
+              "slug": "mens-clothing"
+            }
+          }
+        },
+        {
+          "cursor": "@cursor",
+          "node": {
+            "id": "product-05",
+            "name": "John Hardy Women's Legends Naga Gold & Silver Dragon Station Chain Bracelet",
+            "slug": "john-hardy-legends-naga-dragon-station-chain-bracelet",
+            "price": { "amount": 69500, "currency": "EUR" },
+            "stock": 3,
+            "imageUrl": "/images/products/john-hardy-legends-naga-dragon-station-chain-bracelet.svg",
+            "category": {
+              "id": "category-jewellery",
+              "name": "Jewellery",
+              "slug": "jewellery"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "errors": []
+}

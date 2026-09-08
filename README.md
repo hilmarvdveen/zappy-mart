@@ -43,9 +43,12 @@ standalone components and the shared contract, and keeps its wishlist.
 
 ## Status
 
-8 September 2026: the backlog, the principles, the domain, the contract
-at version 0.1 and the Angular product listing page. The first running
-store is the C# backend (item Z3 in the backlog).
+9 September 2026: the contract at version 1.0 with its seed, 33
+conformance scenarios and the runner in `tools/conformance`, a mock
+server in `tools/mock-server` that passes all 33, the Angular product
+listing page upgraded to Angular 22, and the federation design for the
+Node backend. The three monoliths, the federated graph and the three
+store fronts are being built.
 
 ## Licence
 

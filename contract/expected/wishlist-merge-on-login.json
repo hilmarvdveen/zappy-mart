@@ -1,0 +1,30 @@
+{
+  "data": {
+    "addToWishlist": {
+      "products": [
+        {
+          "id": "product-06",
+          "slug": "solid-gold-petite-micropave"
+        }
+      ],
+      "errors": []
+    },
+    "login": {
+      "accessToken": "@token",
+      "accessTokenExpiresAt": "@dateTime",
+      "customer": {
+        "id": "@id",
+        "email": "sam@example.com",
+        "name": "Sam Rivers",
+        "wishlist": [
+          {
+            "id": "product-06",
+            "slug": "solid-gold-petite-micropave"
+          }
+        ]
+      },
+      "errors": []
+    }
+  },
+  "errors": []
+}

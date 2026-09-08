@@ -1,0 +1,25 @@
+query CatalogueFilterByCategory($filter: ProductFilter, $first: Int!) {
+  products(filter: $filter, first: $first) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    edges {
+      cursor
+      node {
+        id
+        name
+        slug
+        price {
+          amount
+          currency
+        }
+        stock
+        category {
+          slug
+        }
+      }
+    }
+  }
+}

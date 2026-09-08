@@ -1,0 +1,44 @@
+mutation PromotionApplyPercentage($code: String!) {
+  applyPromotionCode(code: $code) {
+    errors {
+      code
+      field
+    }
+    cart {
+      id
+      lines {
+        id
+        quantity
+        lineTotal {
+          amount
+          currency
+        }
+        product {
+          id
+          slug
+        }
+      }
+      promotion {
+        code
+        kind
+        discount {
+          amount
+          currency
+        }
+      }
+      subtotal {
+        amount
+        currency
+      }
+      shipping {
+        amount
+        currency
+      }
+      total {
+        amount
+        currency
+      }
+      updatedAt
+    }
+  }
+}

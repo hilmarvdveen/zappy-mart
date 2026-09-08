@@ -1,0 +1,15 @@
+{
+  "data": {
+    "revokeSession": {
+      "sessions": [
+        {
+          "id": "@id",
+          "device": "phone",
+          "current": true
+        }
+      ],
+      "errors": []
+    }
+  },
+  "errors": []
+}

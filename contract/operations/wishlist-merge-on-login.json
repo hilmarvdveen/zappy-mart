@@ -1,0 +1,8 @@
+{
+  "productId": "product-06",
+  "input": {
+    "email": "sam@example.com",
+    "password": "conformance runner password",
+    "device": "Conformance runner"
+  }
+}
