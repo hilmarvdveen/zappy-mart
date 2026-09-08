@@ -196,7 +196,7 @@ application, and the shared suites pass where they apply.
 | Item | Work | Depends on | Effort | Status |
 |---|---|---|---|---|
 | Z0 | The skeleton: repository, principles, domain, contract 0.1, versions, this backlog | | 2 | done 8 September 2026 |
-| Z1 | Verify and pin the missing versions (Hot Chocolate, EF Core, urql, gql.tada, Apollo Angular, Playwright, Vitest, PostgreSQL, Argon2 libraries per language) into `docs/versions.md` | Z0 | 1 | open |
+| Z1 | Verify and pin the missing versions (Hot Chocolate, EF Core, urql, gql.tada, Apollo Angular, Playwright, Vitest, PostgreSQL, Argon2 libraries per language) into `docs/versions.md` | Z0 | 1 | done 8 September 2026 |
 | Z2 | The contract finished: schema 1.0, seed data, conformance operations and expected answers, the runner | Z1 | 4 | open |
 | Z3 | The C# backend: hexagonal monolith, five modules, EF Core on PostgreSQL, Hot Chocolate, the security model, unit and integration tests, conformance green, README walk through | Z2 | 12 | open |
 | Z4 | `docs/patterns.md` and `docs/security.md` written against the C# code with file paths | Z3 | 3 | open |
@@ -204,7 +204,7 @@ application, and the shared suites pass where they apply.
 | Z6 | The Java backend, same modules, same tests, conformance green, README | Z2 | 10 | open |
 | Z7 | The Kotlin backend, same, README explaining what the language changes against Z6 | Z6 | 8 | open |
 | Z8 | The Next.js frontend, end to end green, README | Z3 | 8 | open |
-| Z9 | The Angular frontend, grown from the existing app: Angular 19.2 to 22, modules to standalone components, zoneless change detection, the JSON catalogue replaced by the contract, the wishlist kept and moved into the schema, end to end green, README | Z3 | 8 | open |
+| Z9 | The Angular frontend, grown from the existing app: Angular 19.2 to 22, modules to standalone components, zoneless change detection, the JSON catalogue replaced by the contract, the wishlist kept and moved into the schema, end to end green, README | Z3 | 8 | upgrade done 8 September 2026 (Angular 22.1.5, standalone, zoneless), the contract and the screens open |
 | Z10 | A REST facet on the C# backend: a second inbound adapter over the same use cases, so the hexagon proves itself and H17 has its example | Z3 | 4 | open, needs decision 6 |
 | Z11 | The Node backend on Apollo Server, if H16 needs a running Node server | Z2 | 8 | open, needs decision 5 |
 | Z12 | Continuous integration on GitHub Actions: build and test per project on every push, the conformance runner against each backend in a container, no deploy | Z3 | 3 | open |

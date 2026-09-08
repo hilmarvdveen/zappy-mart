@@ -43,19 +43,38 @@ on a date, never a number from memory.
 | Java images | `eclipse-temurin` 25 JDK and JRE | 6 September 2026 | Docker Hub |
 | Testcontainers | 2.0.5 | 6 September 2026 | testcontainers.org |
 
-## To verify before the first line that uses them (item Z1)
+## Verified on 8 September 2026 for item Z1
 
-| Item | Why it is needed | Candidate |
+Read from the npm registry, the NuGet flat container, endoflife.date and
+the Spring Boot 4.1.1 dependency bill of materials on 8 September 2026.
+
+| Item | Version | Notes | Source |
+|---|---|---|---|
+| Hot Chocolate | `HotChocolate.AspNetCore` 16.6.4 | 16.7 is in preview, not used | NuGet |
+| EF Core | `Microsoft.EntityFrameworkCore` 10.0.12 | 11 is a release candidate, not used. The .NET runtime patch is re-checked at Z3 against this | NuGet |
+| Npgsql for EF Core | `Npgsql.EntityFrameworkCore.PostgreSQL` 10.0.3 | | NuGet |
+| JWT on .NET | `Microsoft.IdentityModel.JsonWebTokens` 8.22.0, `Microsoft.AspNetCore.Authentication.JwtBearer` 10.0.12 | | NuGet |
+| Argon2id on .NET | `Konscious.Security.Cryptography.Argon2` 1.3.1 | parameters from the OWASP password storage cheat sheet, re-read at Z3 | NuGet |
+| Testcontainers for .NET | `Testcontainers.PostgreSql` 4.15.0 | | NuGet |
+| PostgreSQL | 18, latest 18.6, supported to 14 November 2030 | image tag `postgres:18` in every `compose.yaml` and every Testcontainers run | endoflife.date |
+| Spring Boot 4.1.1 manages | Spring for GraphQL 2.0.5, Spring Security 7.1.1, Spring Data 2026.0.1, Hibernate 7.4.5.Final, Jackson 3.1.5, graphql-java 25.0, PostgreSQL JDBC 42.7.13, Testcontainers 2.0.5, Kotlin 2.3.21 | the JVM backends take these from the bill of materials, Kotlin is raised to 2.4.10 explicitly | spring-boot-dependencies 4.1.1 pom |
+| urql | `urql` 5.0.4 with `@urql/core` 6.0.3, `@urql/next` 2.0.1 | React Router frontend, and the Next.js alternative to Apollo if wanted | npm |
+| gql.tada | 1.11.3, TypeScript 5 to 8 | React Router frontend | npm |
+| Apollo Angular | `apollo-angular` 14.2.0, peers Angular 20 to 22 and `@apollo/client` 4.2.3 or later | Angular frontend | npm |
+| Tailwind CSS | 4.3.3 | the three frontends, the same version the site runs | npm |
+| Vite | 8.2.2 | React Router build | npm |
+| Vitest | 5.0.0, pairs with Vite 6.4 to 8 | unit tests in the React Router and Next.js frontends | npm |
+| Testing Library for React | 16.3.3 | | npm |
+| Playwright | `@playwright/test` 1.63.0 | the end to end suite | npm |
+| TypeScript | 7.0.2 is the latest release. Angular 22 and typescript-eslint 8.70 require `<6.1.0`, so the family pins the 6.0 line, the exact patch at install | | npm |
+| Angular tooling | `@angular/cli` 22.1.7, `angular-eslint` 22.5.0, `typescript-eslint` 8.70.0, `prettier` 3.9.6 | | npm |
+| jest-preset-angular | 17.0.0, Angular 20 to 22 with Jest 30 | the Angular app may keep Jest, the upgrade decides and records it | npm |
+
+## Still to verify at the item that first needs it
+
+| Item | Needed by | Note |
 |---|---|---|
-| Hot Chocolate | the GraphQL server for .NET | the current major on NuGet, its .NET 10 support |
-| EF Core | persistence in the C# backend | the 10.x patch that pairs with .NET 10.0.11 |
-| Npgsql | PostgreSQL provider for EF Core | the current major |
-| PostgreSQL | the database in every `compose.yaml` and every Testcontainers run | the current major, one tag for all backends |
-| urql and gql.tada | the GraphQL client and the typed documents in the React Router frontend, the record names both at bol.com | the current versions on npm |
-| Apollo Angular | the GraphQL client in the Angular frontend | the current version and its Angular 22 peer |
-| Tailwind CSS | styling in the three frontends, the site runs 4.3 | the current 4.x |
-| Vite | the React Router build | the version React Router 8.3 pairs with |
-| Vitest, Testing Library, Playwright | the test tools | current versions |
-| Argon2id libraries | password hashing per language: `Konscious.Security.Cryptography` or the built in PBKDF2 alternative on .NET, `spring-security-crypto` Argon2 on the JVM | current versions and the OWASP parameters |
-| JWT libraries | `Microsoft.IdentityModel.JsonWebTokens` on .NET, `spring-security-oauth2-jose` (Nimbus) on the JVM | current versions |
-| Spring Data JPA and Hibernate | persistence on the JVM | the versions Spring Boot 4.1.1 manages |
+| Argon2 parameters | Z3 | memory, iterations and parallelism from the OWASP password storage cheat sheet, read on the day |
+| Spring Security Argon2 encoder | Z6 | `Argon2PasswordEncoder` in spring-security-crypto 7.1.1, its recommended factory method checked on the day |
+| .NET runtime patch | Z3 | the table says 10.0.11, EF Core is at 10.0.12, the SDK in use is recorded when the solution is created |
+| TypeScript 6.0 patch | Z5, Z8, Z9 | the exact 6.0.x that Angular 22 and typescript-eslint accept, recorded at install |
