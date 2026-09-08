@@ -50,12 +50,18 @@ call, not twenty.
 
 ## The supergraph
 
-`rover supergraph compose` builds `supergraph.graphql` from the five
-subgraph schemas, and Apollo Router serves it. `router.yaml` carries the
-header propagation (Authorization and the two cookies to every subgraph),
-CORS and the origin check, per subgraph timeouts and rate limits,
-automatic persisted queries, depth and cost limits, and OpenTelemetry
-export. A script in `tools/` compares the composed API schema with
+`@apollo/composition` builds `supergraph.graphql` from the five subgraph
+schemas in a script, and `@apollo/gateway` on Apollo Server serves it as
+the gateway process. That is the all JavaScript shape, chosen on
+9 September 2026 because the antivirus on the development laptop blocks
+the Rust binaries that `@apollo/router` and `@apollo/rover` download. The
+gateway carries the header propagation (Authorization and the two cookies
+to every subgraph and the cookies back), CORS and the origin check, and a
+timeout per subgraph. Apollo Router is the production choice and runs the
+same `supergraph.graphql` unchanged, with `router.yaml` carrying what the
+gateway carries in code plus rate limits, automatic persisted queries,
+depth and cost limits and OpenTelemetry export. The README of the Node
+backend has the section that explains the swap. A script in `tools/` compares the composed API schema with
 `contract/schema.graphql` and fails on any difference, so the federated
 backend and the monoliths stay one contract.
 
