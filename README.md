@@ -1,2 +1,52 @@
-# zappy-mart
-Zappy Mart is a sleek and minimal Product Listing Page built with modern frontend techniques. It features a dynamic wishlist experience with persistent storage, interactive UI elements, and a clean side panel interface, all powered by a simple JSON-based product catalog.
+# Zappy Mart
+
+One small web store, built several times over, so that every article on
+[hilmarvanderveen.com](https://www.hilmarvanderveen.com) has a working
+application behind it that you can read end to end and build yourself.
+
+The store is the same in every version: a catalogue, a cart, a checkout,
+customer accounts with secure sessions, and promotion codes. One GraphQL
+schema in `contract/` is served by every backend and consumed by every
+frontend, so any frontend runs against any backend.
+
+| | C# on .NET 10 | Java 25 on Spring Boot 4.1 | Kotlin 2.4 on Spring Boot 4.1 |
+|---|---|---|---|
+| **React Router 8** | | | |
+| **Next.js 16** | | | |
+| **Angular 22** | | | |
+
+Every cell is the same store. The backends are hexagonal monoliths with
+five modules (catalogue, cart, promotions, ordering, accounts), the
+frontends share one set of screens and one end to end suite.
+
+Nothing here is deployed. The value is the code, the tests, and the walk
+through in every project's README that goes from an empty folder to a
+running application.
+
+## Where to start
+
+- `BACKLOG.md`: what gets built, in which order, and the decisions behind it.
+- `docs/principles.md`: the rules every project follows.
+- `docs/domain.md`: the store and its rules.
+- `contract/schema.graphql`: the one schema.
+- `docs/security.md`: sessions and JWT, the model every project shares.
+- `docs/patterns.md`: the design patterns, each with the problem it solves.
+- `docs/versions.md`: every version, pinned and dated.
+
+## Where it started
+
+The repository began in April 2025 as an Angular product listing page
+with a persistent wishlist, a side drawer and a JSON catalogue. That
+application lives on in `frontends/angular/` and is the starting point
+of the Angular store front: it moves to the current Angular release,
+standalone components and the shared contract, and keeps its wishlist.
+
+## Status
+
+8 September 2026: the backlog, the principles, the domain, the contract
+at version 0.1 and the Angular product listing page. The first running
+store is the C# backend (item Z3 in the backlog).
+
+## Licence
+
+MIT, see `LICENSE`.

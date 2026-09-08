@@ -1,0 +1,212 @@
+"""
+Zappy Mart contract, version 0.1 (8 September 2026).
+Every backend serves this schema. Every frontend consumes it.
+"""
+
+scalar DateTime
+
+type Money {
+  amount: Int!
+  currency: String!
+}
+
+type Category {
+  id: ID!
+  name: String!
+  slug: String!
+}
+
+type Product {
+  id: ID!
+  name: String!
+  slug: String!
+  description: String!
+  price: Money!
+  category: Category!
+  stock: Int!
+  imageUrl: String
+}
+
+type ProductEdge {
+  cursor: String!
+  node: Product!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  endCursor: String
+}
+
+type ProductConnection {
+  edges: [ProductEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input ProductFilter {
+  categorySlug: String
+  nameContains: String
+  inStockOnly: Boolean
+}
+
+type CartLine {
+  id: ID!
+  product: Product!
+  quantity: Int!
+  lineTotal: Money!
+}
+
+enum PromotionKind {
+  PERCENTAGE
+  FIXED_AMOUNT
+  FREE_SHIPPING
+}
+
+type AppliedPromotion {
+  code: String!
+  kind: PromotionKind!
+  discount: Money!
+}
+
+type Cart {
+  id: ID!
+  lines: [CartLine!]!
+  promotion: AppliedPromotion
+  subtotal: Money!
+  shipping: Money!
+  total: Money!
+  updatedAt: DateTime!
+}
+
+enum OrderStatus {
+  PLACED
+  PAID
+  CANCELLED
+}
+
+type OrderLine {
+  productName: String!
+  unitPrice: Money!
+  quantity: Int!
+  lineTotal: Money!
+}
+
+type Order {
+  id: ID!
+  number: String!
+  status: OrderStatus!
+  lines: [OrderLine!]!
+  promotionCode: String
+  subtotal: Money!
+  shipping: Money!
+  total: Money!
+  placedAt: DateTime!
+}
+
+type OrderEdge {
+  cursor: String!
+  node: Order!
+}
+
+type OrderConnection {
+  edges: [OrderEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type Session {
+  id: ID!
+  device: String!
+  createdAt: DateTime!
+  lastUsedAt: DateTime!
+  current: Boolean!
+}
+
+type Customer {
+  id: ID!
+  email: String!
+  name: String!
+  createdAt: DateTime!
+  sessions: [Session!]!
+  wishlist: [Product!]!
+}
+
+type UserError {
+  code: String!
+  message: String!
+  field: String
+}
+
+type AuthenticationPayload {
+  customer: Customer
+  accessToken: String
+  accessTokenExpiresAt: DateTime
+  errors: [UserError!]!
+}
+
+type CartPayload {
+  cart: Cart
+  errors: [UserError!]!
+}
+
+type OrderPayload {
+  order: Order
+  errors: [UserError!]!
+}
+
+type LogoutPayload {
+  success: Boolean!
+  errors: [UserError!]!
+}
+
+type RevokeSessionPayload {
+  sessions: [Session!]!
+  errors: [UserError!]!
+}
+
+type WishlistPayload {
+  products: [Product!]!
+  errors: [UserError!]!
+}
+
+type Query {
+  products(filter: ProductFilter, first: Int = 24, after: String): ProductConnection!
+  product(slug: String!): Product
+  categories: [Category!]!
+  cart: Cart!
+  wishlist: [Product!]!
+  me: Customer
+  orders(first: Int = 10, after: String): OrderConnection!
+  order(id: ID!): Order
+}
+
+input RegisterInput {
+  email: String!
+  name: String!
+  password: String!
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+  device: String
+}
+
+type Mutation {
+  register(input: RegisterInput!): AuthenticationPayload!
+  login(input: LoginInput!): AuthenticationPayload!
+  refreshSession: AuthenticationPayload!
+  logout: LogoutPayload!
+  revokeSession(sessionId: ID!): RevokeSessionPayload!
+
+  addToCart(productId: ID!, quantity: Int = 1): CartPayload!
+  changeCartLineQuantity(lineId: ID!, quantity: Int!): CartPayload!
+  removeCartLine(lineId: ID!): CartPayload!
+  applyPromotionCode(code: String!): CartPayload!
+  removePromotionCode: CartPayload!
+
+  addToWishlist(productId: ID!): WishlistPayload!
+  removeFromWishlist(productId: ID!): WishlistPayload!
+
+  placeOrder: OrderPayload!
+}
