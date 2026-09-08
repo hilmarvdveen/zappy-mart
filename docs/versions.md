@@ -68,7 +68,7 @@ the Spring Boot 4.1.1 dependency bill of materials on 8 September 2026.
 | Playwright | `@playwright/test` 1.63.0 | the end to end suite | npm |
 | TypeScript | 7.0.2 is the latest release. Angular 22 and typescript-eslint 8.70 require `<6.1.0`, so the family pins the 6.0 line, the exact patch at install | | npm |
 | Angular tooling | `@angular/cli` 22.1.7, `angular-eslint` 22.5.0, `typescript-eslint` 8.70.0, `prettier` 3.9.6 | | npm |
-| jest-preset-angular | 17.0.0, Angular 20 to 22 with Jest 30 | the Angular app may keep Jest, the upgrade decides and records it | npm |
+| jest-preset-angular | 17.0.0, Angular 20 to 22 with Jest 30 | kept in `frontends/angular`, see the Angular unit test runner row above | npm |
 
 ## Still to verify at the item that first needs it
 
@@ -77,4 +77,4 @@ the Spring Boot 4.1.1 dependency bill of materials on 8 September 2026.
 | Argon2 parameters | Z3 | memory, iterations and parallelism from the OWASP password storage cheat sheet, read on the day |
 | Spring Security Argon2 encoder | Z6 | `Argon2PasswordEncoder` in spring-security-crypto 7.1.1, its recommended factory method checked on the day |
 | .NET runtime patch | Z3 | the table says 10.0.11, EF Core is at 10.0.12, the SDK in use is recorded when the solution is created |
-| TypeScript 6.0 patch | Z5, Z8, Z9 | the exact 6.0.x that Angular 22 and typescript-eslint accept, recorded at install |
+| TypeScript 6.0 patch | Z5, Z8 | the React Router and Next.js frontends record their 6.0.x at install, the Angular frontend runs 6.0.3 |
