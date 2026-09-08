@@ -1,11 +1,15 @@
-import { Component, Signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { WishListDrawerService } from '../wish-list-drawer/wish-list-drawer.service';
+import ProductsComponent from '../products/products.component';
+import { WishListDrawerComponent } from '../wish-list-drawer/wish-list-drawer.component';
 
-@Component({ selector: 'app-home', templateUrl: './home.component.html', standalone: false })
+@Component({
+  selector: 'app-home',
+  templateUrl: './home.component.html',
+  imports: [ProductsComponent, WishListDrawerComponent],
+})
 export class HomeComponent {
-  public readonly isOpen: Signal<boolean>;
+  private readonly wishListDrawerService = inject(WishListDrawerService);
 
-  constructor(private readonly wishListDrawerService: WishListDrawerService) {
-    this.isOpen = this.wishListDrawerService.isOpen;
-  }
+  public readonly isOpen = this.wishListDrawerService.isOpen;
 }

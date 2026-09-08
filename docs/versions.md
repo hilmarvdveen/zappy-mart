@@ -21,7 +21,13 @@ on a date, never a number from memory.
 | Kotlin with Spring | Spring Boot 4.1.1 manages Kotlin 2.3.21, minimum 2.2, `kotlin("plugin.spring")` opens annotated classes, `jackson-module-kotlin` auto registers | 6 September 2026 | docs.spring.io |
 | kotlinx.coroutines | 1.11.0 | 6 September 2026 | Kotlin/kotlinx.coroutines releases |
 | graphql-kotlin (Expedia) | 9.0.0-alpha.8, a pre-release from May 2025, not used | 7 September 2026 | Maven Central |
-| Angular | 22.1.5, TypeScript `>=6.0.0 <6.1.0`, Node `^22.22.3 \|\| ^24.15.0 \|\| ^26.0.0`, zoneless by default, `OnPush` the default for new components | 3 September 2026 | angular.dev, npm |
+| Angular | 22.1.5, with the CLI and `@angular/build` at 22.1.7. TypeScript `>=6.0.0 <6.1.0`, Node `^22.22.3 \|\| ^24.15.0 \|\| ^26.0.0`, zoneless by default, `OnPush` the default for new components. The version `frontends/angular` runs | 8 September 2026 | npm, angular.dev |
+| TypeScript for Angular | 6.0.3, the 6.0.x that Angular 22 requires | 8 September 2026 | npm |
+| Angular unit test runner | Jest 30.5.1 with `jest-preset-angular` 17.0.0. That release declares `@angular/core >=20.0.0 <23.0.0`, so it supports Angular 22, and it ships `setup-env/zoneless` for a zoneless `TestBed`. The Vitest runner in `@angular/build` is therefore not needed in `frontends/angular` and the existing Jest specs stay | 8 September 2026 | npm |
+| ESLint | 10.10.0, with `@eslint/js` 10.0.1 | 8 September 2026 | npm |
+| angular-eslint | 22.5.0, the line that pairs with Angular 22. Peers eslint `^9.0.0 \|\| ^10.0.0` and typescript-eslint `^8.0.0`. Its recommended set makes `prefer-inject` an error | 8 September 2026 | npm |
+| typescript-eslint | 8.70.0, peer typescript `>=4.8.4 <6.1.0` | 8 September 2026 | npm |
+| Prettier | 3.9.6, with `eslint-config-prettier` 10.1.8 and `eslint-plugin-prettier` 5.5.6 | 8 September 2026 | npm |
 | React Router | 8.3.1, peer React `>=19.2.7` | 7 September 2026 | npm |
 | React | 19.2.8, the version the site runs | 5 September 2026 | npm |
 | Next.js | 16.3.4, the version the site runs | 5 September 2026 | npm |

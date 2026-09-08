@@ -1,3 +1,4 @@
+import { TestBed } from '@angular/core/testing';
 import { WishListService } from './wish-list.service';
 import { Product } from '../models/product.model';
 import { LocalStorageService } from './local-storage.service';
@@ -23,12 +24,16 @@ describe('WishListService', () => {
       remove: jest.fn(),
     } as unknown as jest.Mocked<LocalStorageService>;
 
-    service = new WishListService(storage);
+    TestBed.configureTestingModule({
+      providers: [{ provide: LocalStorageService, useValue: storage }],
+    });
+
+    service = TestBed.inject(WishListService);
   });
 
   it('should initialize with items from local storage', () => {
     storage.get.mockReturnValueOnce([mockProduct]);
-    const initializedService = new WishListService(storage);
+    const initializedService = TestBed.runInInjectionContext(() => new WishListService());
     expect(initializedService.wishlist()).toEqual([mockProduct]);
   });
 

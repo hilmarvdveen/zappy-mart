@@ -11,10 +11,12 @@
     <h3 class="wishlist-drawer__title">Mijn Favorieten</h3>
 
     <ul class="wishlist-drawer__list">
-      <li *ngFor="let product of wishlist()" class="wishlist-drawer__item">
-        <img [src]="product.image" [alt]="product.title" class="wishlist-drawer__image" />
-        <span class="wishlist-drawer__name">{{ product.title }}</span>
-      </li>
+      @for (product of wishlist(); track product) {
+        <li class="wishlist-drawer__item">
+          <img [src]="product.image" [alt]="product.title" class="wishlist-drawer__image" />
+          <span class="wishlist-drawer__name">{{ product.title }}</span>
+        </li>
+      }
     </ul>
   </div>
 </div>

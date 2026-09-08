@@ -23,12 +23,12 @@ describe('ProductCardComponent', () => {
     };
 
     TestBed.configureTestingModule({
-      declarations: [ProductCardComponent],
+      imports: [ProductCardComponent],
     });
 
     fixture = TestBed.createComponent(ProductCardComponent);
     component = fixture.componentInstance;
-    component.product = mockProduct;
+    fixture.componentRef.setInput('product', mockProduct);
     fixture.detectChanges();
   });
 
@@ -47,7 +47,7 @@ describe('ProductCardComponent', () => {
   });
 
   it('should show "Voeg toe aan favorieten" when inWishlist is false', () => {
-    component.inWishlist = false;
+    fixture.componentRef.setInput('inWishlist', false);
     fixture.detectChanges();
 
     const button = fixture.debugElement.query(By.css('.card__action-wish-list'));
@@ -55,7 +55,7 @@ describe('ProductCardComponent', () => {
   });
 
   it('should show "Verwijder uit favorieten" when inWishlist is true', () => {
-    component.inWishlist = true;
+    fixture.componentRef.setInput('inWishlist', true);
     fixture.detectChanges();
 
     const button = fixture.debugElement.query(By.css('.card__action-wish-list'));

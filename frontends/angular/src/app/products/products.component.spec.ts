@@ -6,11 +6,11 @@ import { signal } from '@angular/core';
 import { WishListService } from '../../shared/services/wish-list.service';
 import { Product } from '../../shared/models/product.model';
 import ProductsComponent from './products.component';
+import ProductCardComponent from '../../shared/components/product-card/product-card.component';
 import { ProductSignalStoreService } from '../../shared/services/product-signal-store.service';
 
 @Component({
   selector: 'app-product-card',
-  standalone: false,
   template:
     '<div>{{ product?.title }}</div><button (click)="toggleWishlist.emit(product)">Toggle</button>',
 })
@@ -49,12 +49,17 @@ describe('ProductsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ProductsComponent, MockProductCardComponent],
+      imports: [ProductsComponent],
       providers: [
         { provide: ProductSignalStoreService, useValue: mockStore },
         { provide: WishListService, useValue: mockWishlist },
       ],
-    }).compileComponents();
+    })
+      .overrideComponent(ProductsComponent, {
+        remove: { imports: [ProductCardComponent] },
+        add: { imports: [MockProductCardComponent] },
+      })
+      .compileComponents();
 
     fixture = TestBed.createComponent(ProductsComponent);
     fixture.detectChanges();
@@ -66,8 +71,8 @@ describe('ProductsComponent', () => {
   });
 
   it('should call toggleWishlist when event is emitted from card', () => {
-    const cardDebugEl = fixture.debugElement.query(By.directive(MockProductCardComponent));
-    const cardInstance = cardDebugEl.componentInstance as MockProductCardComponent;
+    const cardDebugElement = fixture.debugElement.query(By.directive(MockProductCardComponent));
+    const cardInstance = cardDebugElement.componentInstance as MockProductCardComponent;
 
     cardInstance.toggleWishlist.emit(mockProducts[0]);
 

@@ -1,29 +1,23 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Product } from '../../shared/models/product.model';
 import { WishListService } from '../../shared/services/wish-list.service';
 import { ProductSignalStoreService } from '../../shared/services/product-signal-store.service';
+import ProductCardComponent from '../../shared/components/product-card/product-card.component';
 
 @Component({
   selector: 'app-products',
   templateUrl: './products.component.html',
   styleUrl: './products.component.scss',
-  standalone: false,
+  imports: [ProductCardComponent],
 })
 export default class ProductsComponent {
-  public readonly products;
-  public readonly loading;
-  public readonly errorMessage;
-  public readonly wishList;
+  private readonly productSignalStoreService = inject(ProductSignalStoreService);
+  private readonly wishListService = inject(WishListService);
 
-  constructor(
-    private readonly productSignalStoreService: ProductSignalStoreService,
-    private readonly wishListService: WishListService
-  ) {
-    this.products = this.productSignalStoreService.products;
-    this.loading = this.productSignalStoreService.loading;
-    this.errorMessage = this.productSignalStoreService.errorMessage;
-    this.wishList = this.wishListService.wishlist;
-  }
+  public readonly products = this.productSignalStoreService.products;
+  public readonly loading = this.productSignalStoreService.loading;
+  public readonly errorMessage = this.productSignalStoreService.errorMessage;
+  public readonly wishList = this.wishListService.wishlist;
 
   isInWishlist(product: Product): boolean {
     return this.wishListService.isInWishlist(product);

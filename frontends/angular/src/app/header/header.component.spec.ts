@@ -1,11 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import HeaderComponent from './header.component';
-import { RouterTestingModule } from '@angular/router/testing';
 import { WishListDrawerService } from '../wish-list-drawer/wish-list-drawer.service';
 import { WishListService } from '../../shared/services/wish-list.service';
 import { Component, signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
-import { Router } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 
 describe('HeaderComponent', () => {
   let fixture: ComponentFixture<HeaderComponent>;
@@ -22,9 +21,9 @@ describe('HeaderComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      declarations: [HeaderComponent, DummyComponent],
-      imports: [RouterTestingModule.withRoutes([{ path: 'over-ons', component: DummyComponent }])],
+      imports: [HeaderComponent],
       providers: [
+        provideRouter([{ path: 'over-ons', component: DummyComponent }]),
         { provide: WishListDrawerService, useValue: mockDrawerService },
         { provide: WishListService, useValue: mockWishListService },
       ],
@@ -64,6 +63,5 @@ describe('HeaderComponent', () => {
 @Component({
   selector: 'app-dummy',
   template: '<p>Dummy</p>',
-  standalone: false,
 })
 class DummyComponent {}

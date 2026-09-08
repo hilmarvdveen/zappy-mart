@@ -7,15 +7,13 @@
 
   <nav class="desktop-navbar__nav">
     <ul class="desktop-navbar__menu">
-      <li
-        class="desktop-navbar__menu-item"
-        *ngFor="let link of menuLinks"
-        [attr.data-active]="isActive(link.path)"
-      >
-        <a class="desktop-navbar__link" [routerLink]="link.path">
-          {{ link.label }}
-        </a>
-      </li>
+      @for (link of menuLinks; track link) {
+        <li class="desktop-navbar__menu-item" [attr.data-active]="link.isActive()">
+          <a class="desktop-navbar__link" [routerLink]="link.path">
+            {{ link.label }}
+          </a>
+        </li>
+      }
     </ul>
   </nav>
 
@@ -40,6 +38,8 @@
       />
     </svg>
 
-    <span class="wishlist-count-badge" *ngIf="count() > 0">{{ count() }}</span>
+    @if (count() > 0) {
+      <span class="wishlist-count-badge">{{ count() }}</span>
+    }
   </button>
 </div>

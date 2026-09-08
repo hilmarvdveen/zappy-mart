@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { WishListDrawerService } from './wish-list-drawer.service';
 import { WishListService } from '../../shared/services/wish-list.service';
 
@@ -6,19 +6,13 @@ import { WishListService } from '../../shared/services/wish-list.service';
   selector: 'app-wish-list-drawer',
   templateUrl: './wish-list-drawer.component.html',
   styleUrl: './wish-list-drawer.component.scss',
-  standalone: false,
 })
 export class WishListDrawerComponent {
-  public readonly isOpen;
-  public readonly wishlist;
+  private readonly wishListDrawerService = inject(WishListDrawerService);
+  private readonly wishlistService = inject(WishListService);
 
-  constructor(
-    private readonly wishListDrawerService: WishListDrawerService,
-    private readonly wishlistService: WishListService
-  ) {
-    this.isOpen = this.wishListDrawerService.isOpen;
-    this.wishlist = this.wishlistService.wishlist;
-  }
+  public readonly isOpen = this.wishListDrawerService.isOpen;
+  public readonly wishlist = this.wishlistService.wishlist;
 
   closeDrawer() {
     this.wishListDrawerService.close();

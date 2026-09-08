@@ -1,22 +1,23 @@
 <section class="products">
   <h2 class="products__heading">All Products</h2>
 
-  <div *ngIf="loading(); else done" class="products__loading">Loading products...</div>
-
-  <ng-template #done>
-    <div *ngIf="errorMessage(); else productList" class="products__error">
-      <p class="products__error-message">{{ errorMessage() }}</p>
-    </div>
-  </ng-template>
-
-  <ng-template #productList>
-    <div class="products__grid">
-      <app-product-card
-        *ngFor="let product of products()"
-        [product]="product"
-        [inWishlist]="isInWishlist(product)"
-        (toggleWishlist)="onToggleWishlist($event)"
-      ></app-product-card>
-    </div>
-  </ng-template>
+  @if (loading()) {
+    <div class="products__loading">Loading products...</div>
+  } @else {
+    @if (errorMessage()) {
+      <div class="products__error">
+        <p class="products__error-message">{{ errorMessage() }}</p>
+      </div>
+    } @else {
+      <div class="products__grid">
+        @for (product of products(); track product) {
+          <app-product-card
+            [product]="product"
+            [inWishlist]="isInWishlist(product)"
+            (toggleWishlist)="onToggleWishlist($event)"
+          ></app-product-card>
+        }
+      </div>
+    }
+  }
 </section>

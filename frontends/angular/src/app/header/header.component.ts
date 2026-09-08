@@ -1,5 +1,5 @@
-import { Component } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, inject } from '@angular/core';
+import { isActive, Router, RouterLink } from '@angular/router';
 import { WishListDrawerService } from '../wish-list-drawer/wish-list-drawer.service';
 import { WishListService } from '../../shared/services/wish-list.service';
 
@@ -7,28 +7,20 @@ import { WishListService } from '../../shared/services/wish-list.service';
   selector: 'app-header',
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss',
-  standalone: false,
+  imports: [RouterLink],
 })
 export default class HeaderComponent {
-  menuLinks = [
-    { path: '/over-ons', label: 'Over ons' },
-  ];
+  private readonly router = inject(Router);
+  private readonly wishListDrawerService = inject(WishListDrawerService);
 
-  public readonly count;
+  readonly count = inject(WishListService).count;
 
-  constructor(
-    private readonly router: Router,
-    private readonly wishListDrawerService: WishListDrawerService,
-    private readonly wishListService: WishListService
-  ) {
-    this.count = this.wishListService.count;
-  }
+  readonly menuLinks = [{ path: '/over-ons', label: 'Over ons' }].map((menuLink) => ({
+    ...menuLink,
+    isActive: isActive(menuLink.path, this.router),
+  }));
 
-  isActive(path: string): boolean {
-    return this.router.url === path;
-  }
-
-  openDrawer() {
+  openDrawer(): void {
     this.wishListDrawerService.toggle();
   }
 }

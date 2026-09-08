@@ -1,4 +1,4 @@
-import { computed, Injectable, signal, Signal } from '@angular/core';
+import { computed, Injectable, signal, Signal, inject } from '@angular/core';
 import { Product } from '../models/product.model';
 import { LocalStorageService } from './local-storage.service';
 
@@ -6,13 +6,11 @@ const STORAGE_KEY = 'wishlist';
 
 @Injectable({ providedIn: 'root' })
 export class WishListService {
-  private readonly _wishlist = signal<Product[]>([]);
+  private readonly storage = inject(LocalStorageService);
+
+  private readonly _wishlist = signal<Product[]>(this.storage.get<Product[]>(STORAGE_KEY) ?? []);
   readonly wishlist: Signal<Product[]> = this._wishlist.asReadonly();
   readonly count = computed(() => this._wishlist().length);
-
-  constructor(private storage: LocalStorageService) {
-    this._wishlist.set(this.storage.get<Product[]>(STORAGE_KEY) ?? []);
-  }
 
   private persist(updated: Product[]): void {
     this._wishlist.set(updated);
@@ -21,7 +19,7 @@ export class WishListService {
 
   isInWishlist(product: Product | number): boolean {
     const id = typeof product === 'number' ? product : product.id;
-    return this._wishlist().some((p) => p.id === id);
+    return this._wishlist().some((wishedProduct) => wishedProduct.id === id);
   }
 
   toggle(product: Product): void {
@@ -38,7 +36,7 @@ export class WishListService {
   }
 
   remove(productId: number): void {
-    this.persist(this._wishlist().filter((p) => p.id !== productId));
+    this.persist(this._wishlist().filter((wishedProduct) => wishedProduct.id !== productId));
   }
 
   clear(): void {

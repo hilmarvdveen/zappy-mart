@@ -1,20 +1,19 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map, Observable } from 'rxjs';
 import { Product } from '../models/product.model';
 
 @Injectable({ providedIn: 'root' })
 export class ProductApiService {
-  private readonly baseUrl = 'assets/products.json';
+  private readonly http = inject(HttpClient);
 
-  constructor(private http: HttpClient) {}
+  private readonly baseUrl = 'assets/products.json';
 
   getAll(): Observable<Product[]> {
     return this.http.get<Product[]>(this.baseUrl);
   }
 
   getById(id: number): Observable<Product | undefined> {
-    // Simulating a backend call to fetch a specific item
-    return this.getAll().pipe(map((products) => products.find((p) => p.id === id)));
+    return this.getAll().pipe(map((products) => products.find((product) => product.id === id)));
   }
 }
