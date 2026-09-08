@@ -22,9 +22,10 @@ Java. Every project doubles as a tutorial.
 
 ## 1. What gets built
 
-One repository, `zappy-mart`, with one contract and six applications.
+One repository, `zappy-mart`, with one contract and seven applications.
 Every backend serves the same schema, every frontend consumes it, so any
-frontend runs against any backend. Three plus three instead of nine.
+frontend runs against any backend. Three monoliths, one federated graph,
+three frontends.
 
 | Folder | What | Stack, from the verified table dated 7 September 2026 | Backs |
 |---|---|---|---|
@@ -35,7 +36,7 @@ frontend runs against any backend. Three plus three instead of nine.
 | `frontends/react-router/` | The store front in React Router framework mode with loaders and actions | React Router 8.3.1, React 19.2, urql and gql.tada (versions to verify), Vite | the React Router post, H17 |
 | `frontends/nextjs/` | The store front on the App Router with server components | Next.js 16.3, React 19.2, Apollo Client 4.2.12 | H16 |
 | `frontends/angular/` | The store front, grown from the existing product listing page, with standalone components and signals | Angular 22.1.5, TypeScript 6.0, Apollo Angular (version to verify) | the Angular posts |
-| `backends/node/` (optional) | A fourth backend on Apollo Server, only if H16 needs a running Node server | Node.js 24, Apollo Server 5.5.1, Express 5.2.1 | H16 |
+| `backends/node/` | The same store as five subgraphs behind an Apollo Router supergraph, GraphQL only on the client side, with caching, idempotency, the outbox, retries and resilience each in a named place (`docs/federation.md`) | Node.js 24, Apollo Server 5.5.1 with `@apollo/subgraph`, Apollo Router and Rover (to verify), PostgreSQL 18 | H16, H19 |
 
 Every version above is the one the blog explains with. A version that is
 not in the table (Hot Chocolate, EF Core patch, urql, gql.tada, Apollo
@@ -206,12 +207,15 @@ application, and the shared suites pass where they apply.
 | Z8 | The Next.js frontend, end to end green, README | Z3 | 8 | open |
 | Z9 | The Angular frontend, grown from the existing app: Angular 19.2 to 22, modules to standalone components, zoneless change detection, the JSON catalogue replaced by the contract, the wishlist kept and moved into the schema, end to end green, README | Z3 | 8 | upgrade done 8 September 2026 (Angular 22.1.5, standalone, zoneless), the contract and the screens open |
 | Z10 | A REST facet on the C# backend: a second inbound adapter over the same use cases, so the hexagon proves itself and H17 has its example | Z3 | 4 | open, needs decision 6 |
-| Z11 | The Node backend on Apollo Server, if H16 needs a running Node server | Z2 | 8 | open, needs decision 5 |
+| Z11a | The Node backend as a federated graph: five subgraphs on Apollo Server with `@apollo/subgraph`, the composed supergraph on Apollo Router, the contract diff script, distributed authentication with a JWKS endpoint, conformance green against the router (`docs/federation.md`) | Z2 | 14 | open |
+| Z11b | The topics of the retail role in the federated backend, one named place and one proving test each: cache invalidation, the stock reservation saga, request against event driven, idempotency keys, retries with a budget, the outbox with at least once delivery, the circuit breaker and the degraded cart, DataLoader and query plans, one trace per request | Z11a | 12 | open |
+| Z11c | Continuous integration for the graph: composition and contract checks that block a merge, one Compose file for the whole graph with the outbox poller and the telemetry collector | Z11b | 3 | open |
 | Z12 | Continuous integration on GitHub Actions: build and test per project on every push, the conformance runner against each backend in a container, no deploy | Z3 | 3 | open |
 | Z13 | The blog posts the family backs, one per project plus the two cross cutting ones (security, patterns), written under the depth rule and linked to the folders | per project | 3 each | open |
 
 Order of work: Z1, Z2, Z3, Z4, Z5, then Z6 and Z8 in parallel, then Z7 and
-Z9, then Z10, Z12, Z13. Z11 only on decision 5.
+Z9, then Z11a, Z11b and Z11c, then Z10, Z12, Z13. Z11a can start as soon as
+Z2 is done if the Node backend should come before the JVM ones.
 
 ## 9. Repository layout
 
@@ -236,7 +240,7 @@ zappy-mart/
     dotnet/                Zappy.Domain, Zappy.Application, Zappy.Adapters.*, Zappy.Host, tests
     java/                  zappy-domain, zappy-application, zappy-adapters, zappy-host, tests
     kotlin/                the same modules in Kotlin
-    node/                  optional
+    node/                  the federated variant: subgraphs/{catalogue,cart,promotions,ordering,accounts}, router/, tools/
   frontends/
     react-router/
     nextjs/
@@ -269,11 +273,17 @@ tests/           unit, integration, conformance client
    repository, one schema, one conformance suite, one README table.
 3. **Licence.** MIT is the draft in the repository. It lets anyone reuse
    the code with attribution, which is what a tutorial wants.
-4. **Database.** PostgreSQL in Docker for every backend (it matches the
-   Docker post and Testcontainers). The alternative, SQLite, needs no
-   Docker for a reader but differs from anything they would run.
-5. **A Node backend.** Only if H16 should run against your own Node
-   server. Without it, H16 explains the Node side with samples.
+4. **Database.** Amended on 9 September 2026: the development laptop
+   has no Docker yet (it supports it, Windows 11 Home with WSL 2 and a
+   hypervisor, the install is his call), so every backend runs and tests
+   on an embedded database by default (SQLite on .NET and Node, H2 in
+   PostgreSQL mode on the JVM) and carries a PostgreSQL 18 profile with a
+   `compose.yaml`, verified once Docker is there. The tutorial reader gets
+   a store that runs without Docker, and the PostgreSQL shape stays.
+5. **A Node backend.** Resolved on 9 September 2026: yes, as the
+   federated variant of `docs/federation.md`, GraphQL only on the client
+   side, so that every topic of the retail role has a place in running
+   code and the blog (H16, H19) has its Node server.
 6. **A REST facet on the C# backend.** Two inbound adapters over one
    application layer is the clearest proof of the hexagon and gives H17 a
    running example. Four hours.
