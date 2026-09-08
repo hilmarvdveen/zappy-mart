@@ -1,212 +1,1203 @@
 """
-Zappy Mart contract, version 0.1 (8 September 2026).
-Every backend serves this schema. Every frontend consumes it.
-"""
+Zappy Mart contract, version 1.0 (9 September 2026).
 
+Every backend serves this schema and every frontend consumes it, so any
+frontend runs against any backend. The rules behind the types are written
+out in `docs/domain.md`, the token model in `docs/security.md`, and the
+conventions this file follows in `docs/contract.md`.
+
+Four conventions hold everywhere:
+
+Full words. `quantity`, never `qty`. `promotionCode`, never `promo`.
+
+Every amount of money is a `Money` value: an integer in the smallest unit
+of one currency. There is no floating point anywhere near a price.
+
+Every id is an opaque string. A client stores it and sends it back and
+never parses it or derives meaning from it.
+
+Every mutation answers with a payload that carries a list of `UserError`
+values. An expected failure (out of stock, an expired code, a wrong
+password) is data the client renders. Only an unexpected failure becomes
+a GraphQL error.
+"""
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+"""
+A moment in time as an ISO 8601 string in UTC, for example
+`2026-09-09T14:30:00Z`. Every backend answers in UTC with second
+precision, so the conformance run compares the same string everywhere.
+"""
 scalar DateTime
 
+"""
+An amount of money as an integer in the smallest unit of its currency,
+which is the shape every price, subtotal, discount and total in this
+schema uses. A cart of nine euro fifty is
+`{ amount: 950, currency: "EUR" }`. The store sells in one currency, so
+every `Money` in one answer carries the same currency code.
+"""
 type Money {
+  """
+  The amount in the smallest unit of the currency, so cents for euro. It
+  is never negative: a discount is a positive amount that is subtracted.
+  """
   amount: Int!
+
+  """
+  The ISO 4217 code of the currency, `EUR` throughout this store.
+  """
   currency: String!
 }
 
+"""
+A group of products. Every product belongs to exactly one category, and
+the four categories of the catalogue are fixed in
+`contract/seed/categories.json`.
+"""
 type Category {
+  """
+  The opaque id of the category.
+  """
   id: ID!
+
+  """
+  The name to show, for example `Men's clothing`.
+  """
   name: String!
+
+  """
+  The stable, lowercase, hyphenated identifier used in urls and in the
+  `categorySlug` filter, for example `mens-clothing`. It never changes,
+  so a link keeps working when the name is edited.
+  """
   slug: String!
 }
 
+"""
+One product in the catalogue. A product has one price in one currency and
+one category, and it is shown whether or not it is in stock.
+"""
 type Product {
+  """
+  The opaque id of the product. It is what `addToCart`, `addToWishlist`
+  and `removeFromWishlist` take.
+  """
   id: ID!
+
+  """
+  The name to show.
+  """
   name: String!
+
+  """
+  The stable, lowercase, hyphenated identifier used in urls and by the
+  `product` query. It never changes, so a link keeps working when the
+  name is edited.
+  """
   slug: String!
+
+  """
+  The description to show on the product page. Plain text, no markup.
+  """
   description: String!
+
+  """
+  What one of this product costs today. An order keeps its own copy of
+  the price of the moment it was placed, so a later change here does not
+  touch a placed order.
+  """
   price: Money!
+
+  """
+  The one category this product belongs to.
+  """
   category: Category!
+
+  """
+  How many are available. A product with zero stock is still shown in the
+  catalogue and on its own page, and adding it to a cart is refused with
+  `OUT_OF_STOCK`.
+  """
   stock: Int!
+
+  """
+  A path to the product picture, for example
+  `/images/products/mens-cotton-jacket.svg`, relative to the frontend
+  that renders it. Real product photography is out of scope, so the seed
+  points at placeholder drawings. Null when a product has no picture at
+  all.
+  """
   imageUrl: String
 }
 
+"""
+One product in a page of products, together with the cursor that asks for
+the page after it.
+"""
 type ProductEdge {
+  """
+  The opaque cursor of this product. Pass it as `after` to read the page
+  that starts after this product.
+  """
   cursor: String!
+
+  """
+  The product itself.
+  """
   node: Product!
 }
 
+"""
+Where a page sits in the list it came from. The store pages forward only,
+because no screen walks backwards through the catalogue or the order
+history.
+"""
 type PageInfo {
+  """
+  True when another page follows this one.
+  """
   hasNextPage: Boolean!
+
+  """
+  The cursor of the last item on this page, to pass as `after` for the
+  next page. Null when the page is empty.
+  """
   endCursor: String
 }
 
+"""
+A page of products, in the catalogue order that
+`contract/seed/products.json` fixes, so every backend answers the same
+page for the same arguments.
+"""
 type ProductConnection {
+  """
+  The products on this page, each with its cursor.
+  """
   edges: [ProductEdge!]!
+
+  """
+  Where this page sits in the list.
+  """
   pageInfo: PageInfo!
+
+  """
+  How many products match the filter across every page, not only this
+  one.
+  """
   totalCount: Int!
 }
 
+"""
+Narrows the catalogue. Every field is optional and the fields that are
+given all have to hold.
+"""
 input ProductFilter {
+  """
+  Keep only the products in the category with this slug.
+  """
   categorySlug: String
+
+  """
+  Keep only the products whose name contains this text, compared without
+  regard to case. This is the whole of search: there is no full text
+  index and no scoring.
+  """
   nameContains: String
+
+  """
+  When true, keep only the products with a stock above zero. The default
+  is false, because a product with no stock is still shown.
+  """
   inStockOnly: Boolean
 }
 
+"""
+One product in a cart, with the quantity the visitor wants.
+"""
 type CartLine {
+  """
+  The opaque id of the line. It is what `changeCartLineQuantity` and
+  `removeCartLine` take, and it is not the product id.
+  """
   id: ID!
+
+  """
+  The product on this line. Its `stock` is the stock right now, which is
+  what a client shows when a quantity change is refused.
+  """
   product: Product!
+
+  """
+  How many of the product the visitor wants. Always one or more: a
+  quantity of zero is refused with `QUANTITY_INVALID`, and
+  `removeCartLine` is how a line goes away.
+  """
   quantity: Int!
+
+  """
+  The price of the product multiplied by the quantity, before any
+  promotion.
+  """
   lineTotal: Money!
 }
 
+"""
+The three kinds of promotion code the store knows. A fourth kind is a
+change to this schema, the seed, the conformance expectations and every
+backend together.
+"""
 enum PromotionKind {
+  """
+  A percentage off the subtotal, for example ten percent with
+  `WELCOME10`.
+  """
   PERCENTAGE
+
+  """
+  A fixed amount off the subtotal, for example five euro with `FIVEOFF`.
+  The discount is never more than the subtotal, so a total never falls
+  below the shipping.
+  """
   FIXED_AMOUNT
+
+  """
+  Shipping at no charge, for example with `FREESHIP`. The code shows in
+  `Cart.shipping` being zero rather than in a discount amount.
+  """
   FREE_SHIPPING
 }
 
+"""
+The promotion code that is applied to a cart, with what it takes off.
+Only one code applies to a cart at a time: applying a second replaces the
+first.
+"""
 type AppliedPromotion {
+  """
+  The code as the visitor typed it, normalised to upper case, for example
+  `WELCOME10`.
+  """
   code: String!
+
+  """
+  Which of the three rules this code follows.
+  """
   kind: PromotionKind!
+
+  """
+  What this code takes off the cart, as a positive amount. A `PERCENTAGE`
+  code gives that percentage of the subtotal, rounded half up to whole
+  cents. A `FIXED_AMOUNT` code gives its own amount, capped at the
+  subtotal. A `FREE_SHIPPING` code gives zero here, because it shows in
+  `Cart.shipping` being zero instead.
+  """
   discount: Money!
 }
 
+"""
+The visitor's cart. An anonymous visitor has a cart too, identified by
+the `zappy_cart` cookie, and that cart moves to the customer on login.
+Every amount below is derived from the lines and the promotion at the
+moment of the answer and is never stored.
+"""
 type Cart {
+  """
+  The opaque id of the cart. A client does not need it: the cookie or the
+  signed in customer decides which cart the `cart` query answers with.
+  """
   id: ID!
+
+  """
+  The lines in the cart, in the order the products were first added. An
+  empty list is a valid, empty cart.
+  """
   lines: [CartLine!]!
+
+  """
+  The promotion code that is applied, or null when none is. Applying a
+  second code replaces this one.
+  """
   promotion: AppliedPromotion
+
+  """
+  The sum of the line totals, before shipping and before any promotion.
+  """
   subtotal: Money!
+
+  """
+  What shipping costs for this cart. The rule is in the Ordering section
+  of `docs/domain.md`: shipping is 495 cents, and it is zero when the
+  subtotal is 5000 cents or more or when a free shipping code applies.
+  """
   shipping: Money!
+
+  """
+  What the visitor pays: `subtotal` plus `shipping` minus the promotion's
+  `discount`. The equation holds for all three kinds of code, because a
+  free shipping code has a discount of zero and shows in `shipping`
+  instead.
+  """
   total: Money!
+
+  """
+  When a line or the promotion of this cart last changed.
+  """
   updatedAt: DateTime!
 }
 
+"""
+Where an order stands. Payment is simulated in this store, so an order is
+`PAID` from the moment it is placed.
+"""
 enum OrderStatus {
+  """
+  The order is recorded and its stock is reserved, and payment has not
+  been confirmed. No backend in this repository answers with this value.
+  It is in the schema because it is the state a real payment provider
+  would put an order in, so a reader sees where that step goes.
+  """
   PLACED
+
+  """
+  The order is recorded, its stock is reserved and it is paid. Every
+  order this store places has this status.
+  """
   PAID
+
+  """
+  The order was cancelled and its stock released. No mutation in this
+  schema cancels an order, so this value carries the history of an order
+  a backend cancels outside the API.
+  """
   CANCELLED
 }
 
+"""
+One product on a placed order, with the name and the price of the moment
+the order was placed. A later change to the product does not touch it,
+which is why these values are copies and not a link to `Product`.
+"""
 type OrderLine {
+  """
+  The name the product had when the order was placed.
+  """
   productName: String!
+
+  """
+  What one of the product cost when the order was placed.
+  """
   unitPrice: Money!
+
+  """
+  How many were ordered.
+  """
   quantity: Int!
+
+  """
+  `unitPrice` multiplied by `quantity`.
+  """
   lineTotal: Money!
 }
 
+"""
+An order a customer placed from a cart. An order belongs to one customer
+and is readable only by that customer.
+"""
 type Order {
+  """
+  The opaque id of the order, which the `order` query takes.
+  """
   id: ID!
+
+  """
+  The number the customer sees on the confirmation screen and in the
+  confirmation mail. It is unique and stable and safe to show. The format
+  is each backend's own choice, so the conformance run compares it as a
+  placeholder.
+  """
   number: String!
+
+  """
+  Where the order stands.
+  """
   status: OrderStatus!
+
+  """
+  The products on the order, with the names and prices of the moment.
+  Always at least one, because an order is placed from a cart with at
+  least one line.
+  """
   lines: [OrderLine!]!
+
+  """
+  The promotion code that was applied when the order was placed, or null
+  when none was. It is the code as a string and not a link to the
+  promotion, so withdrawing or editing the code later does not touch the
+  order.
+  """
   promotionCode: String
+
+  """
+  The sum of the line totals at the moment the order was placed.
+  """
   subtotal: Money!
+
+  """
+  What the promotion code took off, as a positive amount. Zero when no
+  code was applied and zero for a free shipping code, which shows in
+  `shipping` instead.
+  """
+  discount: Money!
+
+  """
+  What shipping cost for this order, by the rule in the Ordering section
+  of `docs/domain.md`.
+  """
   shipping: Money!
+
+  """
+  What the customer paid: `subtotal` plus `shipping` minus `discount`.
+  """
   total: Money!
+
+  """
+  When the order was placed.
+  """
   placedAt: DateTime!
 }
 
+"""
+One order in a page of orders, together with the cursor that asks for the
+page after it.
+"""
 type OrderEdge {
+  """
+  The opaque cursor of this order. Pass it as `after` to read the page
+  that starts after this order.
+  """
   cursor: String!
+
+  """
+  The order itself.
+  """
   node: Order!
 }
 
+"""
+A page of the signed in customer's orders, newest first.
+"""
 type OrderConnection {
+  """
+  The orders on this page, each with its cursor.
+  """
   edges: [OrderEdge!]!
+
+  """
+  Where this page sits in the list.
+  """
   pageInfo: PageInfo!
+
+  """
+  How many orders the customer has across every page, not only this one.
+  """
   totalCount: Int!
 }
 
+"""
+One login of one customer, on one device. A session is what makes a
+logout immediate: the access token is short lived and stateless, and this
+row is what a customer revokes. The model is written out in
+`docs/security.md`.
+"""
 type Session {
+  """
+  The opaque id of the session, which `revokeSession` takes. It is not
+  the refresh token and it is safe to show.
+  """
   id: ID!
+
+  """
+  How the customer recognises this session, for example
+  `Chrome on Windows`. It comes from the `device` field of `login` when
+  the client sends one, and from the user agent otherwise.
+  """
   device: String!
+
+  """
+  When the customer logged in on this device.
+  """
   createdAt: DateTime!
+
+  """
+  When this session last exchanged its refresh token, so the customer
+  sees which sessions are still in use.
+  """
   lastUsedAt: DateTime!
+
+  """
+  True for the session the request is being made from, so a client can
+  label it and warn before revoking it.
+  """
   current: Boolean!
 }
 
+"""
+A registered customer. Only the signed in customer's own record is
+readable, through `me`.
+"""
 type Customer {
+  """
+  The opaque id of the customer.
+  """
   id: ID!
+
+  """
+  The email address, normalised to lower case. It is unique across the
+  store.
+  """
   email: String!
+
+  """
+  The name the customer registered with, used in the greeting and on the
+  confirmation mail.
+  """
   name: String!
+
+  """
+  When the customer registered.
+  """
   createdAt: DateTime!
+
+  """
+  Every session of this customer that has not been revoked and has not
+  expired, newest first, so the customer can see them and end them.
+  """
   sessions: [Session!]!
+
+  """
+  The products the customer saved to find again, newest first. An
+  anonymous visitor keeps a wishlist in the browser, and that list merges
+  into this one on login.
+  """
   wishlist: [Product!]!
 }
 
+"""
+Every reason a mutation can refuse, as a value a client switches on. A
+new code is a change to this schema, the conformance expectations and
+every backend together, so a client that handles every value today keeps
+handling every value tomorrow.
+"""
+enum UserErrorCode {
+  """
+  No product with the given id or slug exists.
+  """
+  PRODUCT_NOT_FOUND
+
+  """
+  The product has less stock than the quantity that was asked for. How
+  many were available is in `CartPayload.availableStock`, so a client can
+  say how many are left without a second query.
+  """
+  OUT_OF_STOCK
+
+  """
+  The quantity is not a whole number of one or more. A quantity of zero
+  is this error and not a removal: `removeCartLine` removes a line.
+  """
+  QUANTITY_INVALID
+
+  """
+  No line with the given id is in this cart. It is also the answer when
+  the line was already removed, so two tabs cannot remove one line twice.
+  """
+  CART_LINE_NOT_FOUND
+
+  """
+  The cart has no lines, so there is nothing to order.
+  """
+  CART_EMPTY
+
+  """
+  No promotion code with that text exists.
+  """
+  CODE_UNKNOWN
+
+  """
+  The promotion code exists and today falls outside its validity window.
+  """
+  CODE_EXPIRED
+
+  """
+  The promotion code exists and has reached its usage limit.
+  """
+  CODE_EXHAUSTED
+
+  """
+  The promotion code exists and the cart subtotal is below the minimum
+  the code asks for.
+  """
+  CODE_MINIMUM_NOT_MET
+
+  """
+  A customer with that email address is already registered.
+  """
+  EMAIL_TAKEN
+
+  """
+  The email address is not a valid address.
+  """
+  EMAIL_INVALID
+
+  """
+  The password is shorter than twelve characters, the minimum in
+  `docs/security.md`.
+  """
+  PASSWORD_TOO_SHORT
+
+  """
+  The password is longer than one hundred and twenty eight characters,
+  the maximum in `docs/security.md`.
+  """
+  PASSWORD_TOO_LONG
+
+  """
+  The email address and the password together do not match a customer.
+  Login answers this one code whether or not the email address is
+  registered, and takes the same time either way, so the answer tells an
+  attacker nothing about who has an account.
+  """
+  CREDENTIALS_INVALID
+
+  """
+  Too many attempts from this address or for this email address in a
+  short time. Login and register answer this and ask the client to wait.
+  """
+  RATE_LIMITED
+
+  """
+  The refresh token that came with the request is unknown, expired, or
+  was already used. A token that was already used means it leaked, so the
+  whole session family is revoked and every device of that customer has
+  to log in again.
+  """
+  SESSION_INVALID
+
+  """
+  No session with the given id belongs to the signed in customer, so
+  there is nothing to revoke.
+  """
+  SESSION_NOT_FOUND
+
+  """
+  The operation needs a signed in customer and the request carried no
+  valid access token.
+  """
+  NOT_AUTHENTICATED
+
+  """
+  No order with the given id belongs to the signed in customer. The
+  `order` query answers null for that case, because a query carries no
+  payload, so this code is what a mutation that names an order answers
+  with.
+  """
+  ORDER_NOT_FOUND
+}
+
+"""
+One reason a mutation refused, in a shape a client renders. A `UserError`
+is an expected outcome and not a bug: the request was well formed and a
+rule said no.
+"""
 type UserError {
-  code: String!
+  """
+  Which rule said no. A client switches on this value and never on the
+  message.
+  """
+  code: UserErrorCode!
+
+  """
+  One English sentence for a developer reading a response or a log. It is
+  not translated and it never carries a password, a token or an email
+  address, so a client shows its own text for the code instead.
+  """
   message: String!
+
+  """
+  The input field the error belongs to, in camel case and dotted for a
+  nested field, for example `input.password` or `quantity`. Null when the
+  error belongs to the operation as a whole rather than to one field.
+  """
   field: String
 }
 
+"""
+The answer of `register`, `login` and `refreshSession`. The refresh token
+is not in this payload: it is set as an httpOnly, Secure, SameSite Lax
+cookie whose path is limited to the refresh mutation, so no script can
+read it and no other request carries it. See `docs/security.md`.
+"""
 type AuthenticationPayload {
+  """
+  The customer that is now signed in, or null when `errors` is not empty.
+  """
   customer: Customer
+
+  """
+  A signed JSON Web Token to send as `Authorization: Bearer <token>` on
+  every request that needs a customer. It carries the customer id, the
+  session id and the expiry and nothing personal. Null when `errors` is
+  not empty.
+  """
   accessToken: String
+
+  """
+  When the access token stops being accepted, fifteen minutes after it
+  was issued. A client refreshes before this moment rather than waiting
+  for a failure. Null when `errors` is not empty.
+  """
   accessTokenExpiresAt: DateTime
+
+  """
+  Empty when the customer is signed in. Otherwise one of `EMAIL_TAKEN`,
+  `EMAIL_INVALID`, `PASSWORD_TOO_SHORT`, `PASSWORD_TOO_LONG`,
+  `CREDENTIALS_INVALID`, `RATE_LIMITED` or `SESSION_INVALID`.
+  """
   errors: [UserError!]!
 }
 
+"""
+The answer of every cart mutation. The cart comes back whole, so a client
+renders the new state without a follow up query.
+"""
 type CartPayload {
+  """
+  The cart after the change, and the cart unchanged when `errors` is not
+  empty. Null only when there is no cart to speak of at all.
+  """
   cart: Cart
+
+  """
+  How many of the product were available at the moment an `OUT_OF_STOCK`
+  error was answered, so a client says how many are left without a second
+  query. Null when no `OUT_OF_STOCK` error is in `errors`.
+  """
+  availableStock: Int
+
+  """
+  Empty when the change was made. Otherwise one of `PRODUCT_NOT_FOUND`,
+  `OUT_OF_STOCK`, `QUANTITY_INVALID`, `CART_LINE_NOT_FOUND`,
+  `CODE_UNKNOWN`, `CODE_EXPIRED`, `CODE_EXHAUSTED` or
+  `CODE_MINIMUM_NOT_MET`.
+  """
   errors: [UserError!]!
 }
 
+"""
+The answer of `placeOrder`.
+"""
 type OrderPayload {
+  """
+  The order that was placed, or null when `errors` is not empty. When it
+  is not null the visitor's cart is empty again.
+  """
   order: Order
+
+  """
+  Empty when the order was placed. Otherwise one of `NOT_AUTHENTICATED`,
+  `CART_EMPTY` or `OUT_OF_STOCK`. An `OUT_OF_STOCK` error names the
+  product in its `message`, and no order is placed at all: either every
+  line is reserved or none is.
+  """
   errors: [UserError!]!
 }
 
+"""
+The answer of `logout`.
+"""
 type LogoutPayload {
+  """
+  True when the session was revoked and the refresh cookie cleared.
+  Logging out twice is not an error: the second call answers true as
+  well, because the outcome the client wanted is the outcome it has.
+  """
   success: Boolean!
+
+  """
+  Empty in every case a client can cause.
+  """
   errors: [UserError!]!
 }
 
+"""
+The answer of `revokeSession`.
+"""
 type RevokeSessionPayload {
+  """
+  The sessions of the customer that are still open after the revocation,
+  newest first, so a client renders the list without a follow up query.
+  """
   sessions: [Session!]!
+
+  """
+  Empty when the session was revoked. Otherwise `NOT_AUTHENTICATED` or
+  `SESSION_NOT_FOUND`.
+  """
   errors: [UserError!]!
 }
 
+"""
+The answer of `addToWishlist` and `removeFromWishlist`.
+"""
 type WishlistPayload {
+  """
+  The wishlist after the change, newest first.
+  """
   products: [Product!]!
+
+  """
+  Empty when the change was made. Otherwise `NOT_AUTHENTICATED` or
+  `PRODUCT_NOT_FOUND`.
+  """
   errors: [UserError!]!
 }
 
+"""
+Everything a client reads. Nothing here changes anything, so every field
+is safe to retry and safe to cache by its arguments.
+"""
 type Query {
-  products(filter: ProductFilter, first: Int = 24, after: String): ProductConnection!
-  product(slug: String!): Product
+  """
+  A page of the catalogue, in the catalogue order that
+  `contract/seed/products.json` fixes, so every backend answers the same
+  page for the same arguments. Products with zero stock are included
+  unless the filter says otherwise.
+  """
+  products(
+    """
+    Narrows the catalogue by category, by name or to what is in stock.
+    Null returns the whole catalogue.
+    """
+    filter: ProductFilter
+
+    """
+    How many products to return, at most one hundred. A larger value is
+    answered with one hundred rather than refused.
+    """
+    first: Int = 24
+
+    """
+    The `cursor` of the last product of the previous page. Null starts at
+    the first product.
+    """
+    after: String
+  ): ProductConnection!
+
+  """
+  One product by its slug, or null when no product has that slug. A
+  product with zero stock is answered like any other.
+  """
+  product(
+    """
+    The product's stable url identifier, for example
+    `mens-cotton-jacket`.
+    """
+    slug: String!
+  ): Product
+
+  """
+  Every category, in the order of `contract/seed/categories.json`. The
+  list is short and fixed, so it is not paged.
+  """
   categories: [Category!]!
+
+  """
+  The visitor's cart, which is always answered and never null: a visitor
+  with no cart yet gets an empty one.
+
+  An anonymous visitor's cart is identified by the `zappy_cart` cookie,
+  which the backend sets on the first cart mutation as httpOnly, Secure
+  and SameSite Lax. A signed in customer's cart is found through the
+  access token instead, and on login the cart the `zappy_cart` cookie
+  points at moves to the customer.
+  """
   cart: Cart!
+
+  """
+  The signed in customer's wishlist, newest first. It is an empty list
+  when nobody is signed in, because an anonymous visitor's wishlist lives
+  in the browser and merges into the customer's on login.
+  """
   wishlist: [Product!]!
+
+  """
+  The signed in customer, or null when the request carries no valid
+  access token. A client uses null to choose between a sign in link and
+  an account menu, which is why this is null rather than an error.
+  """
   me: Customer
-  orders(first: Int = 10, after: String): OrderConnection!
-  order(id: ID!): Order
+
+  """
+  A page of the signed in customer's orders, newest first. An empty page
+  when nobody is signed in.
+  """
+  orders(
+    """
+    How many orders to return, at most one hundred. A larger value is
+    answered with one hundred rather than refused.
+    """
+    first: Int = 10
+
+    """
+    The `cursor` of the last order of the previous page. Null starts at
+    the newest order.
+    """
+    after: String
+  ): OrderConnection!
+
+  """
+  One of the signed in customer's orders by its id, or null when no order
+  with that id belongs to the customer. An order of another customer
+  answers null as well, so the answer tells nobody which ids exist.
+  """
+  order(
+    """
+    The order's opaque id, as `Order.id` gave it.
+    """
+    id: ID!
+  ): Order
 }
 
+"""
+What a customer gives to register. The name and the email address are
+shown back to the customer, the password never is.
+"""
 input RegisterInput {
+  """
+  The email address, which is normalised to lower case and has to be
+  unique across the store.
+  """
   email: String!
+
+  """
+  The name to greet the customer with and to put on the confirmation
+  mail.
+  """
   name: String!
+
+  """
+  The password in clear over the encrypted connection, at least twelve
+  and at most one hundred and twenty eight characters. It is hashed with
+  Argon2id on arrival and is never stored, logged or answered back.
+  """
   password: String!
 }
 
+"""
+What a customer gives to log in.
+"""
 input LoginInput {
+  """
+  The email address, compared without regard to case.
+  """
   email: String!
+
+  """
+  The password in clear over the encrypted connection. It is compared
+  against the stored hash in constant time.
+  """
   password: String!
+
+  """
+  How the customer should recognise this login in the session list, for
+  example `Chrome on Windows`. Null lets the backend derive it from the
+  user agent.
+  """
   device: String
 }
 
-type Mutation {
-  register(input: RegisterInput!): AuthenticationPayload!
-  login(input: LoginInput!): AuthenticationPayload!
-  refreshSession: AuthenticationPayload!
-  logout: LogoutPayload!
-  revokeSession(sessionId: ID!): RevokeSessionPayload!
+"""
+Everything a client changes. Every field answers with a payload that
+carries `errors`, so a refusal a rule caused is data and not a GraphQL
+error.
 
-  addToCart(productId: ID!, quantity: Int = 1): CartPayload!
-  changeCartLineQuantity(lineId: ID!, quantity: Int!): CartPayload!
-  removeCartLine(lineId: ID!): CartPayload!
-  applyPromotionCode(code: String!): CartPayload!
+Every mutation that authenticates with a cookie is refused before the
+resolver runs when the `Origin` header is missing or is not an allowed
+origin. That check sits at the transport and answers a GraphQL error and
+not a `UserError`, because no change to the input puts it right.
+"""
+type Mutation {
+  """
+  Registers a customer and signs them in, so a visitor who just
+  registered does not have to log in as a second step. The anonymous cart
+  and the anonymous wishlist merge into the new customer's.
+  """
+  register(
+    """
+    The email address, the name and the password.
+    """
+    input: RegisterInput!
+  ): AuthenticationPayload!
+
+  """
+  Logs a customer in, creates a session, sets the refresh cookie and
+  answers with an access token. The anonymous cart and the anonymous
+  wishlist merge into the customer's.
+  """
+  login(
+    """
+    The email address, the password and the device description.
+    """
+    input: LoginInput!
+  ): AuthenticationPayload!
+
+  """
+  Exchanges the refresh token in the refresh cookie for a new access
+  token and a new refresh token, and marks the old refresh token as
+  rotated. A refresh token is used once. Presenting a rotated token again
+  means it leaked, so the whole session family is revoked and the answer
+  is `SESSION_INVALID`. This mutation takes no arguments, because the
+  token travels in the cookie and never in a variable.
+  """
+  refreshSession: AuthenticationPayload!
+
+  """
+  Revokes the session the request is made from and clears the refresh
+  cookie. The access token stays valid until it expires, at most fifteen
+  minutes, which is why a client throws it away as well.
+  """
+  logout: LogoutPayload!
+
+  """
+  Revokes one of the signed in customer's sessions, which is how a
+  customer ends a login on a device they no longer have. Revoking the
+  current session is allowed and has the same effect as `logout`.
+  """
+  revokeSession(
+    """
+    The `Session.id` to revoke. It has to belong to the signed in
+    customer, and `SESSION_NOT_FOUND` is the answer when it does not.
+    """
+    sessionId: ID!
+  ): RevokeSessionPayload!
+
+  """
+  Adds a product to the visitor's cart, or raises the quantity when the
+  product is already on a line. The quantity after the change may not
+  exceed the product's stock.
+  """
+  addToCart(
+    """
+    The `Product.id` to add.
+    """
+    productId: ID!
+
+    """
+    How many to add, one or more. The default adds one.
+    """
+    quantity: Int = 1
+  ): CartPayload!
+
+  """
+  Sets the quantity of one cart line to an exact number, which is what a
+  quantity field on the cart screen sends. A quantity of zero is refused
+  with `QUANTITY_INVALID`: `removeCartLine` is how a line goes away.
+  """
+  changeCartLineQuantity(
+    """
+    The `CartLine.id` to change, which is not the product id.
+    """
+    lineId: ID!
+
+    """
+    The new quantity, one or more and at most the product's stock.
+    """
+    quantity: Int!
+  ): CartPayload!
+
+  """
+  Removes one line from the visitor's cart.
+  """
+  removeCartLine(
+    """
+    The `CartLine.id` to remove, which is not the product id.
+    """
+    lineId: ID!
+  ): CartPayload!
+
+  """
+  Applies a promotion code to the visitor's cart. One code applies at a
+  time, so applying a second replaces the first. A code that is unknown,
+  outside its window, at its usage limit or below its minimum subtotal is
+  refused, and the cart keeps the code it had.
+  """
+  applyPromotionCode(
+    """
+    The code the visitor typed. It is compared without regard to case and
+    without surrounding spaces, so `welcome10` finds `WELCOME10`.
+    """
+    code: String!
+  ): CartPayload!
+
+  """
+  Removes the promotion code from the visitor's cart. A cart with no code
+  answers with the unchanged cart and no errors, so a client calls this
+  without checking first.
+  """
   removePromotionCode: CartPayload!
 
-  addToWishlist(productId: ID!): WishlistPayload!
-  removeFromWishlist(productId: ID!): WishlistPayload!
+  """
+  Adds a product to the signed in customer's wishlist. A product that is
+  already on the wishlist answers with the unchanged wishlist and no
+  errors, so a client calls this without checking first.
+  """
+  addToWishlist(
+    """
+    The `Product.id` to save.
+    """
+    productId: ID!
+  ): WishlistPayload!
 
-  placeOrder: OrderPayload!
+  """
+  Removes a product from the signed in customer's wishlist. A product
+  that is not on the wishlist answers with the unchanged wishlist and no
+  errors.
+  """
+  removeFromWishlist(
+    """
+    The `Product.id` to remove.
+    """
+    productId: ID!
+  ): WishlistPayload!
+
+  """
+  Places an order from the signed in customer's cart and empties the
+  cart. It needs a signed in customer and answers `NOT_AUTHENTICATED`
+  otherwise, a cart with at least one line and `CART_EMPTY` otherwise,
+  and stock for every line and `OUT_OF_STOCK` otherwise. Reserving stock
+  is all or nothing: when one line cannot be reserved, no order is placed
+  and no stock moves.
+
+  The order keeps the product names and prices of this moment, the
+  promotion code that was applied, and the subtotal, discount, shipping
+  and total the cart showed. Payment is simulated, so the order is placed
+  as `PAID`.
+  """
+  placeOrder(
+    """
+    A value the client makes up once per checkout attempt, so that a
+    retry after a lost answer does not place a second order. The
+    federated backend stores it with the order and answers with the order
+    it already placed when the same key comes back. The monoliths in
+    `backends/` accept this argument and ignore it, because one database
+    transaction already makes their checkout atomic, and they answer a
+    second call with `CART_EMPTY`.
+    """
+    idempotencyKey: String
+  ): OrderPayload!
 }

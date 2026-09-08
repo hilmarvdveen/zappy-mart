@@ -1,0 +1,57 @@
+[
+  {
+    "code": "WELCOME10",
+    "kind": "PERCENTAGE",
+    "percentage": 10,
+    "amount": null,
+    "minimumSubtotal": null,
+    "validFrom": "2026-01-01T00:00:00Z",
+    "validUntil": "2027-12-31T23:59:59Z",
+    "usageLimit": null,
+    "timesUsed": 0
+  },
+  {
+    "code": "FIVEOFF",
+    "kind": "FIXED_AMOUNT",
+    "percentage": null,
+    "amount": { "amount": 500, "currency": "EUR" },
+    "minimumSubtotal": { "amount": 2500, "currency": "EUR" },
+    "validFrom": "2026-01-01T00:00:00Z",
+    "validUntil": "2027-12-31T23:59:59Z",
+    "usageLimit": null,
+    "timesUsed": 0
+  },
+  {
+    "code": "FREESHIP",
+    "kind": "FREE_SHIPPING",
+    "percentage": null,
+    "amount": null,
+    "minimumSubtotal": null,
+    "validFrom": "2026-01-01T00:00:00Z",
+    "validUntil": "2027-12-31T23:59:59Z",
+    "usageLimit": null,
+    "timesUsed": 0
+  },
+  {
+    "code": "SUMMER2025",
+    "kind": "PERCENTAGE",
+    "percentage": 10,
+    "amount": null,
+    "minimumSubtotal": null,
+    "validFrom": "2025-06-01T00:00:00Z",
+    "validUntil": "2025-08-31T23:59:59Z",
+    "usageLimit": null,
+    "timesUsed": 0
+  },
+  {
+    "code": "ONCE",
+    "kind": "PERCENTAGE",
+    "percentage": 10,
+    "amount": null,
+    "minimumSubtotal": null,
+    "validFrom": "2026-01-01T00:00:00Z",
+    "validUntil": "2027-12-31T23:59:59Z",
+    "usageLimit": 1,
+    "timesUsed": 1
+  }
+]

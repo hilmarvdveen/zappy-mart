@@ -17,9 +17,10 @@ header as a bearer token. A backend verifies it without a database read.
 
 **The refresh token** is random and opaque, valid for thirty days, stored
 hashed in the `sessions` table together with the customer id, the device
-description and the timestamps. It travels in an httpOnly, Secure,
-SameSite Lax cookie whose path is limited to the refresh mutation, so no
-other request carries it and no script can read it.
+description and the timestamps. It travels in the cookie `zappy_refresh`,
+httpOnly, Secure, SameSite Lax, whose path is limited to the refresh
+mutation, so no other request carries it and no script can read it. The
+anonymous cart and wishlist are identified by the cookie `zappy_cart`.
 
 ## Rotation
 

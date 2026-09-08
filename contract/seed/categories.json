@@ -1,0 +1,22 @@
+[
+  {
+    "id": "category-mens-clothing",
+    "name": "Men's clothing",
+    "slug": "mens-clothing"
+  },
+  {
+    "id": "category-jewellery",
+    "name": "Jewellery",
+    "slug": "jewellery"
+  },
+  {
+    "id": "category-electronics",
+    "name": "Electronics",
+    "slug": "electronics"
+  },
+  {
+    "id": "category-womens-clothing",
+    "name": "Women's clothing",
+    "slug": "womens-clothing"
+  }
+]

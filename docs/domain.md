@@ -51,6 +51,20 @@ Owns placing an order from a cart and the order history.
   order is placed and the answer names the product.
 - An order keeps the product names and prices of the moment it was
   placed. A later price change does not touch it.
+- Shipping is a charge and nothing else. It is 495 cents. It is zero when
+  the subtotal is 5000 cents or more, and it is zero when a free shipping
+  code applies. The charge sits on the cart while the visitor shops and is
+  copied onto the order when the order is placed. Addresses, carriers and
+  delivery dates stay out of scope, so this one amount is the whole of
+  shipping in this store. `Cart.shipping` and `Order.shipping` in
+  `contract/schema.graphql` point at this rule.
+- The totals hold one equation, on the cart and on the order alike:
+  `total = subtotal + shipping - discount`. The subtotal is the sum of the
+  line totals. A percentage code discounts that percentage of the
+  subtotal, rounded half up to whole cents. A fixed amount code discounts
+  its own amount, capped at the subtotal. A free shipping code discounts
+  nothing and makes the shipping zero instead, so the equation needs no
+  exception for it.
 - Payment is simulated: an order is placed as paid. The step exists so a
   reader sees where a payment provider would go.
 - Placing an order raises the domain event `OrderPlaced`, which the mail

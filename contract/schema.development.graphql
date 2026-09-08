@@ -1,0 +1,52 @@
+"""
+The answer of `resetSeed`, the one field of the Zappy Mart development
+extension, version 1.0 (9 September 2026).
+
+This file extends `contract/schema.graphql` and is loaded next to it. A
+backend loads it only in its development profile and never in production,
+because the field it adds throws every cart, order, session and customer
+away. A backend that is asked for `resetSeed` outside its development
+profile answers the way it answers any unknown field: `resetSeed` is not
+on `Mutation`, so the document does not validate and nothing runs.
+"""
+type ResetSeedPayload {
+  """
+  True when the store was emptied and the seed loaded again.
+  """
+  success: Boolean!
+
+  """
+  How many products the seed loaded, which is twenty for the seed in
+  `contract/seed/products.json`. The conformance runner checks it, so a
+  half loaded seed fails at the reset rather than in a scenario further
+  on.
+  """
+  loadedProducts: Int!
+
+  """
+  Empty when the reset succeeded. A seed that fails to load is a bug in
+  the backend and not a rule saying no, so it becomes a GraphQL error and
+  this list stays empty.
+  """
+  errors: [UserError!]!
+}
+
+extend type Mutation {
+  """
+  Empties the store and loads `contract/seed/` again: the four
+  categories, the twenty products with their stock, the five promotion
+  codes with their windows and their recorded uses, and the one customer,
+  whose password is hashed again on load. Every cart, order and session
+  is thrown away.
+
+  It is available only in a backend's development profile. The
+  conformance runner in `tools/conformance/` calls it before each
+  scenario, so every run starts from the same data and the expected
+  answers in `contract/expected/` hold whatever ran before them.
+
+  It takes no arguments, because the seed is the seed: there is one
+  shared set of data and every backend answers the conformance operations
+  from it.
+  """
+  resetSeed: ResetSeedPayload!
+}
