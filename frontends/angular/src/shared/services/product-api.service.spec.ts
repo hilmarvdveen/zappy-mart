@@ -48,9 +48,9 @@ describe('ProductApiService', () => {
       expect(products).toEqual(mockProducts);
     });
 
-    const req = httpMock.expectOne('assets/products.json');
-    expect(req.request.method).toBe('GET');
-    req.flush(mockProducts);
+    const pendingRequest = httpMock.expectOne('assets/products.json');
+    expect(pendingRequest.request.method).toBe('GET');
+    pendingRequest.flush(mockProducts);
   });
 
   it('should fetch product by ID', () => {
@@ -59,9 +59,9 @@ describe('ProductApiService', () => {
       expect(product?.id).toBe(2);
     });
 
-    const req = httpMock.expectOne('assets/products.json');
-    expect(req.request.method).toBe('GET');
-    req.flush(mockProducts);
+    const pendingRequest = httpMock.expectOne('assets/products.json');
+    expect(pendingRequest.request.method).toBe('GET');
+    pendingRequest.flush(mockProducts);
   });
 
   it('should return undefined for non-existent product ID', () => {
@@ -69,7 +69,7 @@ describe('ProductApiService', () => {
       expect(product).toBeUndefined();
     });
 
-    const req = httpMock.expectOne('assets/products.json');
-    req.flush(mockProducts);
+    const pendingRequest = httpMock.expectOne('assets/products.json');
+    pendingRequest.flush(mockProducts);
   });
 });
