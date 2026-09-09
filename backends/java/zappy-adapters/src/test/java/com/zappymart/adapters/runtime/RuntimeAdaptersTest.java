@@ -16,11 +16,21 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 class RuntimeAdaptersTest {
 
     @Test
-    void theClockAnswersInUtcWithSecondPrecision() {
+    void theClockAnswersTheCurrentMomentInUtc() {
         Instant now = new SystemClock().now();
 
-        assertThat(now).isEqualTo(now.truncatedTo(ChronoUnit.SECONDS));
         assertThat(now).isCloseTo(Instant.now(), org.assertj.core.api.Assertions.within(1, ChronoUnit.MINUTES));
+    }
+
+    @Test
+    void twoReadingsMillisecondsApartKeepTheirOrder() throws InterruptedException {
+        SystemClock clock = new SystemClock();
+
+        Instant first = clock.now();
+        Thread.sleep(5);
+        Instant second = clock.now();
+
+        assertThat(second).isAfter(first);
     }
 
     @Test

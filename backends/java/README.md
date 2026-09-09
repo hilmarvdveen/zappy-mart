@@ -377,9 +377,14 @@ zappy:
 
 **The `DateTime` scalar.** The contract asks for ISO 8601 in UTC with
 second precision, so the scalar formats with
-`uuuu-MM-dd'T'HH:mm:ss'Z'` and the clock truncates to seconds. A library
-scalar would print `2026-09-09T14:30Z` when the seconds are zero, which
-is a different string, and the conformance run compares strings.
+`uuuu-MM-dd'T'HH:mm:ss'Z'` and truncates to seconds on the way out. The
+clock keeps the full precision of the moment: two logins within one
+second still have to list the newer session first, and the conformance
+run on GitHub's runners, where the two logins of the run fall in the
+same second, is what showed that a clock truncated to seconds cannot
+tell them apart. A library scalar would print `2026-09-09T14:30Z` when
+the seconds are zero, which is a different string, and the conformance
+run compares strings.
 
 **Persistence.** One row class per table, package private, with the
 mapping to and from the domain beside it in the same package. There are
