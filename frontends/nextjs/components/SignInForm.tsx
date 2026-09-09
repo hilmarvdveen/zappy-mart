@@ -15,13 +15,13 @@ export function SignInForm({ destination }: { destination: string }) {
       <input type="hidden" name="destination" value={destination} />
       <div>
         <label
-          htmlFor="sign-in-email"
+          htmlFor="log-in-email"
           className="block text-sm font-medium text-slate-700"
         >
           Email address
         </label>
         <input
-          id="sign-in-email"
+          id="log-in-email"
           name="email"
           type="email"
           autoComplete="email"
@@ -31,13 +31,13 @@ export function SignInForm({ destination }: { destination: string }) {
       </div>
       <div>
         <label
-          htmlFor="sign-in-password"
+          htmlFor="log-in-password"
           className="block text-sm font-medium text-slate-700"
         >
           Password
         </label>
         <input
-          id="sign-in-password"
+          id="log-in-password"
           name="password"
           type="password"
           autoComplete="current-password"
@@ -47,13 +47,13 @@ export function SignInForm({ destination }: { destination: string }) {
       </div>
       <div>
         <label
-          htmlFor="sign-in-device"
+          htmlFor="log-in-device"
           className="block text-sm font-medium text-slate-700"
         >
           Device description
         </label>
         <input
-          id="sign-in-device"
+          id="log-in-device"
           name="device"
           type="text"
           placeholder="Chrome on Windows"
@@ -63,7 +63,7 @@ export function SignInForm({ destination }: { destination: string }) {
           It labels this login in your session list, so you recognise it later.
         </p>
       </div>
-      <SubmitButton label="Sign in" busyLabel="Signing in" />
+      <SubmitButton label="Log in" busyLabel="Logging in" />
       <UserErrorMessages errors={state.errors} />
     </form>
   );

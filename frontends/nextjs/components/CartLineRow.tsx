@@ -2,7 +2,6 @@
 
 import { useActionState } from "react";
 
-import { ProductImage } from "@/components/ProductImage";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UserErrorMessages } from "@/components/UserErrorMessages";
 import { formatMoney } from "@/formatting/money";
@@ -13,34 +12,31 @@ import {
 } from "@/server/actions/cartActions";
 import { untouchedAction } from "@/server/actionState";
 
-export function CartLineRow({ line }: { line: CartDetailFragment["lines"][number] }) {
+export function CartLineRow({
+  line,
+}: {
+  line: CartDetailFragment["lines"][number];
+}) {
   const [quantityState, changeQuantity] = useActionState(
     changeCartLineQuantity,
     untouchedAction,
   );
-  const [removalState, remove] = useActionState(
-    removeCartLine,
-    untouchedAction,
-  );
+  const [removalState, remove] = useActionState(removeCartLine, untouchedAction);
   const quantityFieldId = `line-quantity-${line.id}`;
 
   return (
-    <li className="flex flex-wrap items-center gap-4 border-b border-slate-200 py-4">
-      <ProductImage imageUrl={line.product.imageUrl} size={64} />
-      <div className="min-w-48 flex-1">
-        <p className="font-medium text-slate-900">{line.product.name}</p>
-        <p className="text-sm text-slate-600">
+    <tr className="border-b border-slate-200 align-top">
+      <th scope="row" className="py-4 text-left font-medium text-slate-900">
+        {line.product.name}
+        <span className="block text-sm font-normal text-slate-600">
           {formatMoney(line.product.price)} each
-        </p>
-      </div>
-      <form action={changeQuantity} className="flex items-end gap-2">
-        <input type="hidden" name="lineId" value={line.id} />
-        <div>
-          <label
-            htmlFor={quantityFieldId}
-            className="block text-xs font-medium text-slate-600"
-          >
-            Quantity
+        </span>
+      </th>
+      <td className="py-4">
+        <form action={changeQuantity} className="flex items-center gap-2">
+          <input type="hidden" name="lineId" value={line.id} />
+          <label htmlFor={quantityFieldId} className="sr-only">
+            Quantity of {line.product.name}
           </label>
           <input
             id={quantityFieldId}
@@ -48,25 +44,29 @@ export function CartLineRow({ line }: { line: CartDetailFragment["lines"][number
             type="number"
             min={1}
             defaultValue={line.quantity}
-            className="mt-1 w-20 rounded border border-slate-400 px-2 py-1 text-sm"
+            className="w-20 rounded border border-slate-400 px-2 py-1 text-sm"
           />
-        </div>
-        <SubmitButton label="Update" busyLabel="Updating" tone="secondary" />
-      </form>
-      <p className="w-24 text-right font-medium text-slate-900">
-        {formatMoney(line.lineTotal)}
-      </p>
-      <form action={remove}>
-        <input type="hidden" name="lineId" value={line.id} />
-        <SubmitButton label="Remove" busyLabel="Removing" tone="secondary" />
-      </form>
-      <div className="w-full">
+          <SubmitButton label="Update" busyLabel="Updating" tone="secondary" />
+        </form>
         <UserErrorMessages
           errors={quantityState.errors}
           availableStock={quantityState.availableStock}
         />
+      </td>
+      <td className="py-4 text-right font-medium text-slate-900">
+        {formatMoney(line.lineTotal)}
+      </td>
+      <td className="py-4 text-right">
+        <form action={remove}>
+          <input type="hidden" name="lineId" value={line.id} />
+          <SubmitButton
+            label={`Remove ${line.product.name}`}
+            busyLabel="Removing"
+            tone="secondary"
+          />
+        </form>
         <UserErrorMessages errors={removalState.errors} />
-      </div>
-    </li>
+      </td>
+    </tr>
   );
 }

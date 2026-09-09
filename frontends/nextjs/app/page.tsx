@@ -1,11 +1,12 @@
-import { Suspense } from "react";
+import type { Metadata } from "next";
 
 import { CatalogueFilters } from "@/components/CatalogueFilters";
-import {
-  CatalogueResults,
-  CatalogueResultsPlaceholder,
-} from "@/components/CatalogueResults";
+import { CatalogueResults } from "@/components/CatalogueResults";
 import { selectionFromSearchParameters } from "@/server/catalogueSelection";
+
+export const metadata: Metadata = {
+  title: "Catalogue",
+};
 
 export default async function CataloguePage({ searchParams }: PageProps<"/">) {
   const selection = selectionFromSearchParameters(await searchParams);
@@ -19,18 +20,12 @@ export default async function CataloguePage({ searchParams }: PageProps<"/">) {
           live in the address, so a filtered catalogue is a link you can share.
         </p>
       </div>
-      <Suspense fallback={<p className="text-slate-600">Loading the filter</p>}>
-        <CatalogueFilters
-          categorySlug={selection.categorySlug}
-          searchTerm={selection.searchTerm}
-        />
-      </Suspense>
-      <Suspense
-        key={`${selection.categorySlug ?? ""}-${selection.searchTerm ?? ""}`}
-        fallback={<CatalogueResultsPlaceholder />}
-      >
-        <CatalogueResults selection={selection} />
-      </Suspense>
+      <CatalogueFilters
+        categorySlug={selection.categorySlug}
+        searchTerm={selection.searchTerm}
+        inStockOnly={selection.inStockOnly}
+      />
+      <CatalogueResults selection={selection} />
     </div>
   );
 }

@@ -27,7 +27,6 @@ vi.mock("@/components/CatalogueResults", () => ({
       {selection.searchTerm ?? "every name"}
     </p>
   ),
-  CatalogueResultsPlaceholder: () => <p>loading the catalogue</p>,
 }));
 
 import CataloguePage from "@/app/page";

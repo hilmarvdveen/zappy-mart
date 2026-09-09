@@ -10,6 +10,7 @@ import {
   signedInCustomerQuery,
   wishlistQuery,
 } from "@/graphql/operations";
+import { readSession } from "@/server/session";
 import { readFromApi } from "@/server/storefrontClient";
 
 export const readSignedInCustomer = cache(
@@ -23,4 +24,9 @@ export async function readAccount(): Promise<AccountQuery | null> {
 
 export async function readWishlist(): Promise<WishlistQuery | null> {
   return readFromApi(wishlistQuery, {});
+}
+
+export async function holdsAccessToken(): Promise<boolean> {
+  const session = await readSession();
+  return session.accessToken !== null;
 }

@@ -18,9 +18,9 @@ const sentenceByCode: Record<string, string> = {
   PASSWORD_TOO_LONG: "A password takes at most one hundred and twenty eight characters.",
   CREDENTIALS_INVALID: "That email address and password do not match an account.",
   RATE_LIMITED: "Too many attempts. Wait a moment and try again.",
-  SESSION_INVALID: "Your session has ended. Sign in again.",
+  SESSION_INVALID: "Your session has ended. Please log in again.",
   SESSION_NOT_FOUND: "That session has already ended.",
-  NOT_AUTHENTICATED: "Sign in to continue.",
+  NOT_AUTHENTICATED: "Log in to continue.",
   ORDER_NOT_FOUND: "That order does not belong to this account.",
 };
 

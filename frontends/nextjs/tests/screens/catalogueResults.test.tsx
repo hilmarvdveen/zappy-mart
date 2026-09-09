@@ -27,7 +27,11 @@ import { CatalogueResults } from "@/components/CatalogueResults";
 
 import { backpack, princessRing } from "../support/seedFixtures";
 
-const wholeCatalogue = { categorySlug: null, searchTerm: null };
+const wholeCatalogue = {
+  categorySlug: null,
+  searchTerm: null,
+  inStockOnly: false,
+};
 
 function catalogueOf(products: readonly { id: string }[]) {
   return {
@@ -75,7 +79,11 @@ describe("the product grid on the catalogue screen", () => {
 
     render(
       await CatalogueResults({
-        selection: { categorySlug: null, searchTerm: "nothing" },
+        selection: {
+          categorySlug: null,
+          searchTerm: "nothing",
+          inStockOnly: false,
+        },
       }),
     );
 

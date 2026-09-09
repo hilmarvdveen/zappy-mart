@@ -1,42 +1,18 @@
 import Link from "next/link";
-import { Suspense } from "react";
 
+import { SubmitButton } from "@/components/SubmitButton";
+import { signOut } from "@/server/actions/accountActions";
 import { readSignedInCustomer } from "@/server/account";
 import { countCartItems, readCart } from "@/server/cart";
 
-async function HeaderVisitorLinks() {
+export async function SiteHeader() {
   const [customer, cart] = await Promise.all([
     readSignedInCustomer(),
     readCart(),
   ]);
   const signedIn = customer?.me != null;
+  const savedProductCount = customer?.wishlist.length ?? 0;
 
-  return (
-    <>
-      <Link href="/wishlist" className="text-sm text-slate-700 hover:underline">
-        Wishlist ({customer?.wishlist.length ?? 0})
-      </Link>
-      <Link href="/cart" className="text-sm text-slate-700 hover:underline">
-        Cart ({countCartItems(cart)})
-      </Link>
-      {signedIn ? (
-        <Link href="/account" className="text-sm text-slate-700 hover:underline">
-          Account
-        </Link>
-      ) : (
-        <Link href="/sign-in" className="text-sm text-slate-700 hover:underline">
-          Sign in
-        </Link>
-      )}
-    </>
-  );
-}
-
-function HeaderVisitorLinksPlaceholder() {
-  return <span className="text-sm text-slate-400">Loading your basket</span>;
-}
-
-export function SiteHeader() {
   return (
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-4 py-4">
@@ -47,9 +23,39 @@ export function SiteHeader() {
           <Link href="/" className="text-sm text-slate-700 hover:underline">
             Catalogue
           </Link>
-          <Suspense fallback={<HeaderVisitorLinksPlaceholder />}>
-            <HeaderVisitorLinks />
-          </Suspense>
+          <Link
+            href="/wishlist"
+            className="text-sm text-slate-700 hover:underline"
+          >
+            Wishlist, {savedProductCount} saved
+          </Link>
+          <Link href="/cart" className="text-sm text-slate-700 hover:underline">
+            Cart, {countCartItems(cart)} {countCartItems(cart) === 1 ? "item" : "items"}
+          </Link>
+          {signedIn ? (
+            <>
+              <Link
+                href="/account"
+                className="text-sm text-slate-700 hover:underline"
+              >
+                Your account
+              </Link>
+              <form action={signOut}>
+                <SubmitButton
+                  label="Log out"
+                  busyLabel="Logging out"
+                  tone="secondary"
+                />
+              </form>
+            </>
+          ) : (
+            <Link
+              href="/login"
+              className="text-sm text-slate-700 hover:underline"
+            >
+              Log in
+            </Link>
+          )}
         </nav>
       </div>
     </header>

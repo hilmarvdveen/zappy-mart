@@ -33,7 +33,7 @@ describe("the order confirmation screen", () => {
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: "Thank you, your order is placed",
+        name: "Thank you for your order",
       }),
     ).toBeInTheDocument();
     expect(
@@ -46,8 +46,9 @@ describe("the order confirmation screen", () => {
       "€98.95",
     );
     expect(
-      screen.getByRole("rowheader", { name: "Discount, WELCOME10" }),
+      screen.getByRole("rowheader", { name: "Promotion code" }),
     ).toBeInTheDocument();
+    expect(screen.getByText("WELCOME10", { exact: true })).toBeInTheDocument();
   });
 
   it("offers the way back to the catalogue and to the order history", async () => {

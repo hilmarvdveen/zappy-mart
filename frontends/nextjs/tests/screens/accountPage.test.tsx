@@ -1,13 +1,18 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({
   readAccount: vi.fn(),
+  holdsAccessToken: vi.fn(),
   readOrderHistory: vi.fn(),
+  redirect: vi.fn((destination: string) => {
+    throw new Error(`redirected to ${destination}`);
+  }),
 }));
 
 vi.mock("@/server/account", () => ({
   readAccount: mocked.readAccount,
+  holdsAccessToken: mocked.holdsAccessToken,
 }));
 
 vi.mock("@/server/ordering", () => ({
@@ -16,7 +21,6 @@ vi.mock("@/server/ordering", () => ({
 
 vi.mock("@/server/actions/accountActions", () => ({
   revokeSession: vi.fn(),
-  signOut: vi.fn(),
 }));
 
 vi.mock("@/server/actions/cartActions", () => ({
@@ -28,17 +32,25 @@ vi.mock("@/server/actions/wishlistActions", () => ({
   removeProductFromWishlist: vi.fn(),
 }));
 
+vi.mock("next/navigation", () => ({
+  redirect: mocked.redirect,
+}));
+
 import AccountPage from "@/app/account/page";
 
-import { backpack, placedOrder, signedInCustomer } from "../support/seedFixtures";
+import {
+  backpack,
+  placedOrder,
+  signedInCustomer,
+} from "../support/seedFixtures";
 
 describe("the account screen", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    window.localStorage.clear();
+    mocked.holdsAccessToken.mockResolvedValue(false);
   });
 
-  it("names the customer and carries the order history, the sessions and the wishlist", async () => {
+  it("names the customer and carries the order history and the wishlist", async () => {
     mocked.readAccount.mockResolvedValue({ me: signedInCustomer });
     mocked.readOrderHistory.mockResolvedValue({
       orders: {
@@ -54,22 +66,27 @@ describe("the account screen", () => {
       screen.getByRole("heading", { level: 1, name: "Your account" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { level: 2, name: "Order history" }),
-    ).toBeInTheDocument();
-    expect(
       screen.getByRole("heading", { level: 3, name: "Order ZM-1001" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { level: 2, name: "Sessions" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Revoke Safari on iPhone" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { level: 3, name: backpack.name }),
     ).toBeInTheDocument();
+  });
+
+  it("lists one open session per device and offers to revoke the other one", async () => {
+    mocked.readAccount.mockResolvedValue({ me: signedInCustomer });
+    mocked.readOrderHistory.mockResolvedValue(null);
+
+    render(await AccountPage());
+
+    const openSessions = within(
+      screen.getByRole("region", { name: "Open sessions" }),
+    );
+    const entries = openSessions.getAllByRole("listitem");
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toHaveTextContent("(this device)");
     expect(
-      screen.getByRole("button", { name: "Sign out" }),
+      openSessions.getByRole("button", { name: "Revoke Safari on iPhone" }),
     ).toBeInTheDocument();
   });
 
@@ -93,16 +110,25 @@ describe("the account screen", () => {
     expect(screen.getByText("Your wishlist is empty.")).toBeInTheDocument();
   });
 
-  it("asks a visitor without a session to sign in", async () => {
+  it("asks a visitor without a session to log in", async () => {
     mocked.readAccount.mockResolvedValue({ me: null });
 
     render(await AccountPage());
 
     expect(
       screen.getByRole("link", {
-        name: "Sign in to see your orders and sessions",
+        name: "Log in to see your orders and sessions",
       }),
-    ).toHaveAttribute("href", "/sign-in?next=/account");
+    ).toHaveAttribute("href", "/login?next=/account");
+  });
+
+  it("sends a visitor whose session was revoked to the log in screen", async () => {
+    mocked.readAccount.mockResolvedValue({ me: null });
+    mocked.holdsAccessToken.mockResolvedValue(true);
+
+    await expect(AccountPage()).rejects.toThrow(
+      "redirected to /login?next=/account&sessionEnded=true",
+    );
   });
 
   it("says so when the api does not answer", async () => {

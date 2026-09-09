@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ApiUnavailableNotice } from "@/components/ApiUnavailableNotice";
 import { ProductCard } from "@/components/ProductCard";
 import { readSignedInCustomer, readWishlist } from "@/server/account";
+
+export const metadata: Metadata = {
+  title: "Your wishlist",
+};
 
 export default async function WishlistPage() {
   const [answer, customer] = await Promise.all([
@@ -24,8 +29,8 @@ export default async function WishlistPage() {
         <p className="mt-1 text-slate-700">
           This list belongs to your browser until you sign in, and it moves to
           your account when you do.{" "}
-          <Link href="/sign-in?next=/wishlist" className="underline">
-            Sign in to keep it
+          <Link href="/login?next=/wishlist" className="underline">
+            Log in to keep it
           </Link>
           .
         </p>

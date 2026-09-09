@@ -1,6 +1,7 @@
 export type CatalogueSelection = {
   categorySlug: string | null;
   searchTerm: string | null;
+  inStockOnly: boolean;
 };
 
 export type SearchParameters = Record<string, string | string[] | undefined>;
@@ -20,5 +21,6 @@ export function selectionFromSearchParameters(
   return {
     categorySlug: firstValue(parameters.category),
     searchTerm: firstValue(parameters.search),
+    inStockOnly: firstValue(parameters.inStockOnly) !== null,
   };
 }

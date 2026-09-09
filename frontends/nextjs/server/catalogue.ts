@@ -25,6 +25,7 @@ export async function readCatalogue(
     filter: {
       categorySlug: selection.categorySlug,
       nameContains: selection.searchTerm,
+      inStockOnly: selection.inStockOnly,
     },
     first: catalogueSize,
     after: null,

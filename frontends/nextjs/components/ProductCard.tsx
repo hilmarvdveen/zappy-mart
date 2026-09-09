@@ -15,9 +15,9 @@ export function ProductCard({
 }) {
   return (
     <article className="flex w-full flex-col rounded border border-slate-200 bg-white p-4">
-      <Link href={`/products/${product.slug}`} className="self-center">
+      <div className="self-center">
         <ProductImage imageUrl={product.imageUrl} size={160} />
-      </Link>
+      </div>
       <h3 className="mt-3 text-base font-semibold text-slate-900">
         <Link href={`/products/${product.slug}`} className="hover:underline">
           {product.name}

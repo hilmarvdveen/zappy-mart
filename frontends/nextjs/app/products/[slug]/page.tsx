@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -8,6 +9,14 @@ import { WishlistButton } from "@/components/WishlistButton";
 import { formatMoney } from "@/formatting/money";
 import { readSignedInCustomer } from "@/server/account";
 import { readProduct } from "@/server/catalogue";
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/products/[slug]">): Promise<Metadata> {
+  const { slug } = await params;
+  const answer = await readProduct(slug);
+  return { title: answer?.product?.name ?? "Product" };
+}
 
 export default async function ProductPage({
   params,

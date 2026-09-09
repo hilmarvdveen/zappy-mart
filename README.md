@@ -50,8 +50,7 @@ listing page upgraded to Angular 22, and the federation design for the
 Node backend. The Java and Kotlin monoliths and the federated Node graph
 pass the runner, the C# monolith is being built. The three store
 fronts are done against the mock server, with the shared end to end suite
-in `tools/end-to-end`, which the React Router and Angular fronts pass and the Next.js
-front is being aligned to.
+in `tools/end-to-end`, which all three fronts pass.
 
 ## Licence
 

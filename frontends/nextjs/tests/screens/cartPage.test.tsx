@@ -12,71 +12,50 @@ vi.mock("@/server/cart", () => ({
 vi.mock("@/server/actions/cartActions", () => ({
   changeCartLineQuantity: vi.fn(),
   removeCartLine: vi.fn(),
-  applyPromotionCode: vi.fn(),
-  removePromotionCode: vi.fn(),
 }));
 
 import CartPage from "@/app/cart/page";
 
-import { emptyCart, filledCart } from "../support/seedFixtures";
+import { backpack, emptyCart, filledCart } from "../support/seedFixtures";
 
 describe("the cart screen", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("lists the lines, the totals and the way to the checkout", async () => {
+  it("lists every line as a row with its quantity, its total and its remove button", async () => {
     mocked.readCart.mockResolvedValue({ cart: filledCart });
 
     render(await CartPage());
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Your cart" }),
+      screen.getByRole("heading", { level: 1, name: "Cart" }),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole("listitem")).toHaveLength(1);
-    expect(screen.getByRole("spinbutton", { name: "Quantity" })).toHaveValue(1);
-    expect(screen.getByRole("button", { name: "Update" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
     expect(
-      screen.getByRole("rowheader", { name: "Total" }),
+      screen.getByRole("rowheader", { name: new RegExp(backpack.name) }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("spinbutton", { name: `Quantity of ${backpack.name}` }),
+    ).toHaveValue(1);
+    expect(screen.getByRole("button", { name: "Update" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: `Remove ${backpack.name}` }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the totals and the way to the checkout", async () => {
+    mocked.readCart.mockResolvedValue({ cart: filledCart });
+
+    render(await CartPage());
+
+    expect(screen.getByRole("rowheader", { name: "Total" })).toBeInTheDocument();
     expect(screen.getByRole("table", { name: "Totals" })).toHaveTextContent(
       "€109.95",
     );
-    expect(
-      screen.getByRole("link", { name: "Go to checkout" }),
-    ).toHaveAttribute("href", "/checkout");
-  });
-
-  it("offers the promotion code field while no code is applied", async () => {
-    mocked.readCart.mockResolvedValue({ cart: filledCart });
-
-    render(await CartPage());
-
-    expect(screen.getByRole("textbox", { name: "Code" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Apply" })).toBeInTheDocument();
-  });
-
-  it("offers to remove the code that is applied", async () => {
-    mocked.readCart.mockResolvedValue({
-      cart: {
-        ...filledCart,
-        promotion: {
-          code: "WELCOME10",
-          kind: "PERCENTAGE",
-          discount: { amount: 1100, currency: "EUR" },
-        },
-      },
-    });
-
-    render(await CartPage());
-
-    expect(
-      screen.getByRole("button", { name: "Remove code" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("rowheader", { name: "Discount, WELCOME10" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Go to checkout" })).toHaveAttribute(
+      "href",
+      "/checkout",
+    );
   });
 
   it("points an empty cart back at the catalogue", async () => {
@@ -84,6 +63,7 @@ describe("the cart screen", () => {
 
     render(await CartPage());
 
+    expect(screen.getByText("Your cart is empty.")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Browse the catalogue" }),
     ).toHaveAttribute("href", "/");

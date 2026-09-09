@@ -1,13 +1,18 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { ApiUnavailableNotice } from "@/components/ApiUnavailableNotice";
 import { OrderSummary } from "@/components/OrderSummary";
 import { ProductCard } from "@/components/ProductCard";
 import { SessionList } from "@/components/SessionList";
-import { SignOutForm } from "@/components/SignOutForm";
 import { formatMoment } from "@/formatting/moment";
-import { readAccount } from "@/server/account";
+import { holdsAccessToken, readAccount } from "@/server/account";
 import { readOrderHistory } from "@/server/ordering";
+
+export const metadata: Metadata = {
+  title: "Your account",
+};
 
 export default async function AccountPage() {
   const account = await readAccount();
@@ -18,13 +23,16 @@ export default async function AccountPage() {
 
   const customer = account.me;
   if (customer === null) {
+    if (await holdsAccessToken()) {
+      redirect("/login?next=/account&sessionEnded=true");
+    }
     return (
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Your account</h1>
         <p className="mt-4 text-slate-700">
-          You are not signed in.{" "}
-          <Link href="/sign-in?next=/account" className="underline">
-            Sign in to see your orders and sessions
+          You are not logged in.{" "}
+          <Link href="/login?next=/account" className="underline">
+            Log in to see your orders and sessions
           </Link>
           .
         </p>
@@ -38,21 +46,16 @@ export default async function AccountPage() {
   return (
     <div className="space-y-10">
       <section aria-labelledby="account-heading">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1
-              id="account-heading"
-              className="text-2xl font-semibold text-slate-900"
-            >
-              Your account
-            </h1>
-            <p className="mt-1 text-slate-700">
-              {customer.name}, {customer.email}, registered{" "}
-              {formatMoment(customer.createdAt)}
-            </p>
-          </div>
-          <SignOutForm />
-        </div>
+        <h1
+          id="account-heading"
+          className="text-2xl font-semibold text-slate-900"
+        >
+          Your account
+        </h1>
+        <p className="mt-1 text-slate-700">
+          {customer.name}, {customer.email}, registered{" "}
+          {formatMoment(customer.createdAt)}
+        </p>
       </section>
 
       <section aria-labelledby="order-history-heading">
@@ -77,14 +80,13 @@ export default async function AccountPage() {
         )}
       </section>
 
-      <section aria-labelledby="sessions-heading">
-        <h2 id="sessions-heading" className="text-lg font-semibold text-slate-900">
-          Sessions
+      <section aria-labelledby="open-sessions-heading">
+        <h2
+          id="open-sessions-heading"
+          className="text-lg font-semibold text-slate-900"
+        >
+          Open sessions
         </h2>
-        <p className="mt-1 text-sm text-slate-700">
-          Every login of yours that is still open. Revoking one ends it at once,
-          on that device.
-        </p>
         <div className="mt-3">
           <SessionList sessions={customer.sessions} />
         </div>

@@ -133,7 +133,7 @@ to pass writes these words.
 
 | Screen | Role and name |
 |---|---|
-| Every screen | link `Cart, <count> items`, link or button `Wishlist, <count> saved` (a button where the wishlist opens as a drawer), link `Log in` or button `Log out` |
+| Every screen | link `Cart, <count> items` (`Cart, 1 item` for one, the suite never asserts that count), link or button `Wishlist, <count> saved` (a button where the wishlist opens as a drawer), link `Log in` or button `Log out` |
 | Catalogue | heading level 1 `Catalogue`, searchbox `Search by name`, combobox `Category`, checkbox `In stock only`, button `Filter` |
 | Product | heading level 1 with the product name, spinbutton `Quantity`, button `Add to cart`, status with `Added to your cart.` |
 | Cart | heading level 1 `Cart`, one row per line with the product name, spinbutton in that row, button `Update`, button `Remove <product name>` |

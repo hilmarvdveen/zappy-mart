@@ -65,7 +65,7 @@ export function RegisterForm({ destination }: { destination: string }) {
           At least twelve characters, as the security model asks for.
         </p>
       </div>
-      <SubmitButton label="Create account" busyLabel="Creating your account" />
+      <SubmitButton label="Register" busyLabel="Registering" />
       <UserErrorMessages errors={state.errors} />
     </form>
   );

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { PoliteRouteAnnouncer } from "@/components/PoliteRouteAnnouncer";
 import { SessionRefresher } from "@/components/SessionRefresher";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -8,7 +9,7 @@ import { readSession } from "@/server/session";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Zappy Mart",
+  title: { default: "Zappy Mart", template: "%s, Zappy Mart" },
   description:
     "The Zappy Mart store front on the Next.js App Router: server components read, server actions write.",
 };
@@ -25,6 +26,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             accessTokenExpiresAt={session.accessTokenExpiresAt}
           />
         )}
+        <PoliteRouteAnnouncer />
         <SiteHeader />
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
           {children}

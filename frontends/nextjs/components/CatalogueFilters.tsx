@@ -3,9 +3,11 @@ import { readCategories } from "@/server/catalogue";
 export async function CatalogueFilters({
   categorySlug,
   searchTerm,
+  inStockOnly,
 }: {
   categorySlug: string | null;
   searchTerm: string | null;
+  inStockOnly: boolean;
 }) {
   const answer = await readCategories();
   const categories = answer?.categories ?? [];
@@ -15,8 +17,24 @@ export async function CatalogueFilters({
       role="search"
       method="get"
       action="/"
-      className="flex flex-wrap items-end gap-3 rounded border border-slate-200 bg-white p-4"
+      className="flex flex-wrap items-end gap-4 rounded border border-slate-200 bg-white p-4"
     >
+      <div>
+        <label
+          htmlFor="catalogue-search"
+          className="block text-xs font-medium text-slate-600"
+        >
+          Search by name
+        </label>
+        <input
+          id="catalogue-search"
+          name="search"
+          type="search"
+          defaultValue={searchTerm ?? ""}
+          placeholder="jacket"
+          className="mt-1 w-56 rounded border border-slate-400 px-2 py-2 text-sm"
+        />
+      </div>
       <div>
         <label
           htmlFor="catalogue-category"
@@ -38,27 +56,27 @@ export async function CatalogueFilters({
           ))}
         </select>
       </div>
-      <div>
-        <label
-          htmlFor="catalogue-search"
-          className="block text-xs font-medium text-slate-600"
-        >
-          Search by name
-        </label>
+      <div className="flex items-center gap-2 pb-2">
         <input
-          id="catalogue-search"
-          name="search"
-          type="search"
-          defaultValue={searchTerm ?? ""}
-          placeholder="jacket"
-          className="mt-1 w-56 rounded border border-slate-400 px-2 py-2 text-sm"
+          id="catalogue-in-stock-only"
+          name="inStockOnly"
+          type="checkbox"
+          value="true"
+          defaultChecked={inStockOnly}
+          className="size-4 rounded border-slate-400"
         />
+        <label
+          htmlFor="catalogue-in-stock-only"
+          className="text-sm text-slate-700"
+        >
+          In stock only
+        </label>
       </div>
       <button
         type="submit"
         className="rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700"
       >
-        Show products
+        Filter
       </button>
     </form>
   );

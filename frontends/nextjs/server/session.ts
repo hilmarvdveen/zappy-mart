@@ -13,7 +13,7 @@ import {
   type StorefrontSession,
 } from "@/server/sessionCipher";
 
-export const sessionCookieName = "zappy_storefront_session";
+export const sessionCookieName = "zappy_store_front";
 
 const thirtyDaysInSeconds = 60 * 60 * 24 * 30;
 

@@ -63,13 +63,23 @@ export function OrderSummary({ order }: { order: OrderDetailFragment }) {
             </th>
             <td className="py-1 text-right">{formatMoney(order.shipping)}</td>
           </tr>
+          {order.promotionCode === null ? null : (
+            <tr>
+              <th
+                scope="row"
+                className="py-1 text-left font-normal text-slate-600"
+              >
+                Promotion code
+              </th>
+              <td className="py-1 text-right">{order.promotionCode}</td>
+            </tr>
+          )}
           <tr>
             <th
               scope="row"
               className="py-1 text-left font-normal text-slate-600"
             >
               Discount
-              {order.promotionCode === null ? "" : `, ${order.promotionCode}`}
             </th>
             <td className="py-1 text-right">{formatMoney(order.discount)}</td>
           </tr>

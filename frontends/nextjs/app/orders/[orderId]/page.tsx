@@ -1,9 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ApiUnavailableNotice } from "@/components/ApiUnavailableNotice";
 import { OrderSummary } from "@/components/OrderSummary";
 import { readOrder } from "@/server/ordering";
+
+export const metadata: Metadata = {
+  title: "Your order",
+};
 
 export default async function OrderConfirmationPage({
   params,
@@ -23,7 +28,7 @@ export default async function OrderConfirmationPage({
   return (
     <div>
       <h1 className="text-2xl font-semibold text-slate-900">
-        Thank you, your order is placed
+        Thank you for your order
       </h1>
       <p className="mt-1 text-slate-700">
         Keep the order number. It is what the confirmation mail carries as well.

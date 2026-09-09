@@ -52,7 +52,7 @@ describe("the wishlist screen", () => {
       screen.getByRole("button", { name: "Remove from wishlist" }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("link", { name: "Sign in to keep it" }),
+      screen.queryByRole("link", { name: "Log in to keep it" }),
     ).not.toBeInTheDocument();
   });
 
@@ -66,8 +66,8 @@ describe("the wishlist screen", () => {
     render(await WishlistPage());
 
     expect(
-      screen.getByRole("link", { name: "Sign in to keep it" }),
-    ).toHaveAttribute("href", "/sign-in?next=/wishlist");
+      screen.getByRole("link", { name: "Log in to keep it" }),
+    ).toHaveAttribute("href", "/login?next=/wishlist");
     expect(
       screen.getByRole("heading", { level: 3, name: backpack.name }),
     ).toBeInTheDocument();

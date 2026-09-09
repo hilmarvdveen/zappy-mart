@@ -49,19 +49,3 @@ export async function CatalogueResults({
     </div>
   );
 }
-
-export function CatalogueResultsPlaceholder() {
-  return (
-    <ul
-      aria-hidden="true"
-      className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-    >
-      {[0, 1, 2, 3, 4, 5].map((position) => (
-        <li
-          key={position}
-          className="h-80 animate-pulse rounded border border-slate-200 bg-slate-100"
-        />
-      ))}
-    </ul>
-  );
-}

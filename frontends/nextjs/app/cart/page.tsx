@@ -1,10 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ApiUnavailableNotice } from "@/components/ApiUnavailableNotice";
 import { CartLineRow } from "@/components/CartLineRow";
 import { CartSummary } from "@/components/CartSummary";
-import { PromotionCodeForm } from "@/components/PromotionCodeForm";
 import { readCart } from "@/server/cart";
+
+export const metadata: Metadata = {
+  title: "Cart",
+};
 
 export default async function CartPage() {
   const answer = await readCart();
@@ -17,23 +21,42 @@ export default async function CartPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-slate-900">Your cart</h1>
+      <h1 className="text-2xl font-semibold text-slate-900">Cart</h1>
       {cart.lines.length === 0 ? (
-        <p className="mt-4 text-slate-700">
-          Your cart is empty.{" "}
-          <Link href="/" className="underline">
-            Browse the catalogue
-          </Link>
-          .
-        </p>
+        <>
+          <p className="mt-4 text-slate-700">Your cart is empty.</p>
+          <p className="mt-2">
+            <Link href="/" className="underline">
+              Browse the catalogue
+            </Link>
+          </p>
+        </>
       ) : (
         <>
-          <ul className="mt-4">
-            {cart.lines.map((line) => (
-              <CartLineRow key={line.id} line={line} />
-            ))}
-          </ul>
-          <PromotionCodeForm appliedCode={cart.promotion?.code ?? null} />
+          <table className="mt-4 w-full text-sm">
+            <caption className="sr-only">The lines in your cart</caption>
+            <thead>
+              <tr className="border-b border-slate-300 text-left text-slate-600">
+                <th scope="col" className="py-2 font-normal">
+                  Product
+                </th>
+                <th scope="col" className="py-2 font-normal">
+                  Quantity
+                </th>
+                <th scope="col" className="py-2 text-right font-normal">
+                  Line total
+                </th>
+                <th scope="col" className="py-2 text-right font-normal">
+                  Remove
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {cart.lines.map((line) => (
+                <CartLineRow key={line.id} line={line} />
+              ))}
+            </tbody>
+          </table>
           <div className="mt-6">
             <CartSummary cart={cart} />
           </div>

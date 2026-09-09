@@ -1,13 +1,18 @@
 # The store front on Next.js 16, App Router
 
 Item Z8 of [BACKLOG.md](../../BACKLOG.md). The Zappy Mart store on the Next.js
-App Router: server components read, server actions write, one route handler is
-the backend for frontend that holds the API tokens, and the catalogue streams.
-It talks to any backend that serves `contract/schema.graphql`, and during
-development it talks to the mock server in [tools/mock-server](../../tools/mock-server).
+App Router: server components read, server actions write, and one route handler
+is the backend for frontend that holds the API tokens. It talks to any backend
+that serves `contract/schema.graphql`, and during development it talks to the
+mock server in [tools/mock-server](../../tools/mock-server).
 
 It runs on **port 3001**. Port 3000 is taken on the machine this was built on,
 and the shared end to end suite expects 3001 as well.
+
+It passes the shared end to end suite in [tools/end-to-end](../../tools/end-to-end),
+including the test that runs with JavaScript switched off. That suite is the
+contract every store front in this repository answers to, and the section at the
+end of this README shows the run.
 
 What a reader takes away from this project, next to the React Router and the
 Angular versions of the same store:
@@ -19,23 +24,26 @@ Angular versions of the same store:
 - The backend for frontend shape: the browser holds one encrypted cookie, the
   API tokens never leave the server, and the API's own cookies are carried by
   the frontend's server on the visitor's behalf.
-- Streaming: the catalogue sends its shell first and the product grid after.
 - Where each of the four Next.js caches sits and which one a mutation touches.
+- Why a store front that has to work without JavaScript keeps its content out
+  of a Suspense boundary, which is written out under "Streaming, and why there
+  is none" below.
 
 ## The screens
 
-Six screens carry the store, and two more make them reachable.
+Six screens carry the store, and three more make them reachable.
 
 | Route | What it does |
 |---|---|
-| `/` | The catalogue. The category and the search term live in the address (`/?category=electronics&search=drive`), so a filtered catalogue is a link you can share. The filter and the grid each stream in behind their own boundary. |
+| `/` | The catalogue. The category, the search term and the in stock filter live in the address (`/?search=MBJ&category=womens-clothing`), so a filtered catalogue is a link you can share. |
 | `/products/<slug>` | One product with its description, its stock, a quantity field, add to cart and save to wishlist. A product with no stock is shown and its button is disabled, which is the rule in `docs/domain.md`. |
-| `/cart` | The lines with a quantity field and a remove button each, the promotion code field, and the totals. |
-| `/checkout` | What is being ordered, the totals again, and one button that places the order. A visitor without an account is asked to sign in first, because an order belongs to a customer. |
+| `/cart` | One table row per line, each with a quantity field, an update button and a remove button, then the totals and the way to the checkout. |
+| `/checkout` | What is being ordered, the promotion code field, the totals, and one button that places the order. A visitor without an account is sent to the log in screen, because an order belongs to a customer. |
 | `/orders/<id>` | The order confirmation: the order number, the lines with the names and prices of the moment, and the totals. |
-| `/account` | The customer, the order history, the sessions with a revoke button each, the wishlist and sign out. |
-| `/sign-in` | Sign in and register, side by side. Supporting screen: the six above are the store, this one is how you reach the last two. |
-| `/wishlist` | The saved products. Supporting screen. It works signed out as well, because the wishlist lives on the server against the `zappy_cart` cookie, the same way the cart does. |
+| `/account` | The customer, the order history, the open sessions with a revoke button each, and the wishlist. |
+| `/login` | Log in. Supporting screen: the six above are the store, this one is how you reach the last two. |
+| `/register` | Register, which logs the new customer in straight away. |
+| `/wishlist` | The saved products. It works logged out as well, because the wishlist lives on the server against the `zappy_cart` cookie, the same way the cart does. |
 
 Two route handlers sit behind them:
 
@@ -44,11 +52,24 @@ Two route handlers sit behind them:
 | `POST /api/session` | The backend for frontend the browser talks to. It exchanges the refresh token for a new access token shortly before the old one expires. It answers with the new expiry and never with a token. It refuses a request whose `Origin` is not the store front. |
 | `GET /images/products/<name>.svg` | Draws a placeholder for a product picture. `contract/seed/products.json` points at `/images/products/<slug>.svg` and the contract holds no binary, so each frontend serves its own drawings. Photography is out of scope, so this one is a coloured circle with the product's initials. |
 
-### The wishlist, signed out and signed in
+### The names the screens use
+
+The accessible names on these screens are not a matter of taste. They are the
+contract in the table "The names the store front has to use" in
+[tools/end-to-end/README.md](../../tools/end-to-end/README.md), and the same
+words appear in the React Router and the Angular store fronts, which is what
+lets one Playwright suite drive all three. So the header link reads
+`Cart, 2 items` and not `Cart (2)`, the catalogue button reads `Filter` and not
+`Show products`, and the log in screen is at `/login` with an `h1` of `Log in`.
+
+A change to any of those words is a change to the suite and to three store
+fronts together.
+
+### The wishlist, logged out and logged in
 
 The wishlist behaves like the cart. An anonymous visitor's list is kept by the
 API against the `zappy_cart` cookie, so `addToWishlist` and `removeFromWishlist`
-work signed out, and the `wishlist` query answers with the saved products. On
+work logged out, and the `wishlist` query answers with the saved products. On
 login the API merges that list into the customer's own. The store front keeps no
 copy in the browser: there is no client store for server data anywhere in this
 project.
@@ -57,7 +78,7 @@ project.
 
 ```
 the browser
-  |  one cookie: zappy_storefront_session, httpOnly, encrypted
+  |  one cookie: zappy_store_front, httpOnly, encrypted
   v
 the Next.js server                       <- the backend for frontend
   server components  ->  readFromApi()   \
@@ -71,9 +92,10 @@ the GraphQL API (a backend, or tools/mock-server)
 ```
 
 Everything that reads is a server component. Everything that writes is a server
-action. The few client components exist for one reason each: `useActionState` to
-render a refusal next to the field that caused it, `useFormStatus` to disable a
-button while its form is in flight, and one timer that keeps the login alive.
+action. Ten components carry `"use client"`, and each has one reason: eight use
+`useActionState` to render a refusal from the contract next to the field that
+caused it, `SubmitButton` uses `useFormStatus` to disable itself while its form
+is in flight, and `SessionRefresher` owns the timer that keeps the login alive.
 
 The two functions every screen and every action goes through live in
 `server/storefrontClient.ts`:
@@ -92,11 +114,11 @@ visitors, because it carries one visitor's access token.
 `docs/security.md` gives Next.js the backend for frontend shape, and this is it,
 in four rules.
 
-**One cookie reaches the browser.** `zappy_storefront_session` is httpOnly,
-SameSite Lax, Secure in production, and encrypted with AES-256-GCM from
-`node:crypto`. It carries the access token, the moment that token expires, and
-the values of the API's own two cookies. Change one character of it and it
-decrypts to no session at all, because the authentication tag no longer matches.
+**One cookie reaches the browser.** `zappy_store_front` is httpOnly, SameSite
+Lax, Secure in production, and encrypted with AES-256-GCM from `node:crypto`. It
+carries the access token, the moment that token expires, and the values of the
+API's own two cookies. Change one character of it and it decrypts to no session
+at all, because the authentication tag no longer matches.
 
 **The API's cookies are carried, never forwarded.** `zappy_refresh` and
 `zappy_cart` are set by the API on the frontend's server. The store front reads
@@ -113,14 +135,18 @@ mutation is always a server action here.
 **Signing out is throwing the cookie away.** The `logout` mutation revokes the
 session, and the backends check that session on every request, so the access
 token is dead the moment the mutation returns. Clearing the frontend cookie is
-the whole of the rest.
+the whole of the rest. That is also why replaying an old cookie cannot revive a
+login: the token inside it names a session the API has already closed. A screen
+that finds a customer of `null` while the cookie still holds an access token
+sends the visitor to `/login?sessionEnded=true`, which is where the notice
+"Your session has ended. Please log in again." comes from.
 
 The refresh runs from the browser through `POST /api/session`, because only the
 browser knows the visitor is still there and only a route handler may write the
 new cookie. `SessionRefresher` schedules one call a minute before the access
 token expires. A refresh token is used once: if two tabs ever refresh at the
-same moment the API revokes the family and both are asked to sign in again,
-which is the rotation rule of `docs/security.md` working as designed.
+same moment the API revokes the family and both are asked to log in again, which
+is the rotation rule of `docs/security.md` working as designed.
 
 ## The cache, and what a mutation invalidates
 
@@ -141,7 +167,7 @@ says so out loud.
 
 **The Full Route Cache stays empty.** Every route reads the session cookie
 through the header, so every route is dynamic. `next build` prints `ƒ` next to
-all eleven of them.
+all twelve of them.
 
 **The Router Cache is the one a mutation invalidates.** It is the browser's copy
 of the React Server Component payload of the screens the visitor has already
@@ -151,6 +177,49 @@ the header lives in the root layout and shows the cart count and the wishlist
 count, so a change to either changes what every screen renders. A narrower
 `revalidatePath("/cart")` would leave a stale count in the header of every other
 screen.
+
+## Streaming, and why there is none
+
+The first version of this store front streamed. The product grid sat behind a
+`<Suspense>` boundary with a skeleton fallback, and so did the cart count in the
+header. It looked right and it failed the progressive enhancement test of the
+shared suite, for a reason worth writing down.
+
+React streams a boundary that is still pending when the shell is flushed by
+sending the finished markup later, at the end of the document, inside a hidden
+element, followed by a small inline script that moves it into place. With
+JavaScript switched off that script never runs, so everything inside the
+boundary stays hidden. A visitor without JavaScript would have seen a catalogue
+with no products and a header with no cart.
+
+So this store front has no Suspense boundary. Every screen awaits its data and
+sends one complete document. The cost is real and it is named here: the first
+byte waits for the API, and on a slow API a visitor sees nothing until it
+answers. The lesson is the trade: streaming belongs on a screen that needs
+JavaScript anyway, and a store front that promises to work without it keeps its
+content in the shell.
+
+The same reasoning drives two more choices. The catalogue filter is a plain
+`method="get"` form, so the browser navigates on its own and the filter works
+with no JavaScript at all. Every cart form posts to a server action, which React
+submits as an ordinary form post when JavaScript is off.
+
+## The route announcer
+
+Next.js appends a live region to every page so a screen reader hears the new
+page title after a client side navigation, and it gives that region
+`role="alert"`. An assertive alert is the wrong tool for a route change, which
+should not interrupt what the visitor is hearing, and it means every page in the
+application carries a permanent second alert next to any alert of its own.
+
+`components/PoliteRouteAnnouncer.tsx` installs the announcer node before Next.js
+asks for it, in an insertion effect, which runs before every other effect of the
+same commit. Next.js reuses an announcer that already exists, which is a branch
+in its own code, so the store front decides what that node is: a polite,
+atomic live region with no live region role at all. Route changes are still
+announced. `role="alert"` and `role="status"` now belong to the screens, which
+is what makes "Added to your cart." and "Your session has ended." findable as
+the one status and the one alert on their screen.
 
 ## From an empty folder to a running store
 
@@ -207,7 +276,9 @@ node server.mjs
 ```
 
 It serves `http://localhost:4000/graphql` and allows the origin
-`http://localhost:3001`.
+`http://localhost:3001`. Give it another port with `ZAPPY_MOCK_PORT=4001` when
+somebody else is already using 4000, and point the store front at it with
+`ZAPPY_GRAPHQL_URL`.
 
 ### 5. Run the store front
 
@@ -224,7 +295,7 @@ It prints:
 ```
 
 Open `http://localhost:3001`. The catalogue shows the twenty seeded products.
-Sign in with `jane@example.com` and the password
+Log in with `jane@example.com` and the password
 `correct horse battery staple`, which is the one customer in
 `contract/seed/customers.json`.
 
@@ -1100,7 +1171,7 @@ import {
   type StorefrontSession,
 } from "@/server/sessionCipher";
 
-export const sessionCookieName = "zappy_storefront_session";
+export const sessionCookieName = "zappy_store_front";
 
 const thirtyDaysInSeconds = 60 * 60 * 24 * 30;
 
@@ -1442,6 +1513,7 @@ export async function readCatalogue(
     filter: {
       categorySlug: selection.categorySlug,
       nameContains: selection.searchTerm,
+      inStockOnly: selection.inStockOnly,
     },
     first: catalogueSize,
     after: null,
@@ -1461,6 +1533,7 @@ export async function readProduct(
 export type CatalogueSelection = {
   categorySlug: string | null;
   searchTerm: string | null;
+  inStockOnly: boolean;
 };
 
 export type SearchParameters = Record<string, string | string[] | undefined>;
@@ -1480,6 +1553,7 @@ export function selectionFromSearchParameters(
   return {
     categorySlug: firstValue(parameters.category),
     searchTerm: firstValue(parameters.search),
+    inStockOnly: firstValue(parameters.inStockOnly) !== null,
   };
 }
 ```
@@ -1520,6 +1594,7 @@ import {
   signedInCustomerQuery,
   wishlistQuery,
 } from "@/graphql/operations";
+import { readSession } from "@/server/session";
 import { readFromApi } from "@/server/storefrontClient";
 
 export const readSignedInCustomer = cache(
@@ -1533,6 +1608,11 @@ export async function readAccount(): Promise<AccountQuery | null> {
 
 export async function readWishlist(): Promise<WishlistQuery | null> {
   return readFromApi(wishlistQuery, {});
+}
+
+export async function holdsAccessToken(): Promise<boolean> {
+  const session = await readSession();
+  return session.accessToken !== null;
 }
 ```
 
@@ -1894,13 +1974,15 @@ export async function removeProductFromWishlist(
 ### The screens
 
 The routes stay thin. A page reads what it needs, decides what to render, and
-hands the rendering to the components below.
+hands the rendering to the components below. Each one names its own title, which
+is what the route announcer reads out after a client side navigation.
 
 **`app/layout.tsx`**
 
 ```tsx
 import type { Metadata } from "next";
 
+import { PoliteRouteAnnouncer } from "@/components/PoliteRouteAnnouncer";
 import { SessionRefresher } from "@/components/SessionRefresher";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -1909,7 +1991,7 @@ import { readSession } from "@/server/session";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Zappy Mart",
+  title: { default: "Zappy Mart", template: "%s, Zappy Mart" },
   description:
     "The Zappy Mart store front on the Next.js App Router: server components read, server actions write.",
 };
@@ -1926,6 +2008,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             accessTokenExpiresAt={session.accessTokenExpiresAt}
           />
         )}
+        <PoliteRouteAnnouncer />
         <SiteHeader />
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
           {children}
@@ -1946,14 +2029,15 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
 **`app/page.tsx`**
 
 ```tsx
-import { Suspense } from "react";
+import type { Metadata } from "next";
 
 import { CatalogueFilters } from "@/components/CatalogueFilters";
-import {
-  CatalogueResults,
-  CatalogueResultsPlaceholder,
-} from "@/components/CatalogueResults";
+import { CatalogueResults } from "@/components/CatalogueResults";
 import { selectionFromSearchParameters } from "@/server/catalogueSelection";
+
+export const metadata: Metadata = {
+  title: "Catalogue",
+};
 
 export default async function CataloguePage({ searchParams }: PageProps<"/">) {
   const selection = selectionFromSearchParameters(await searchParams);
@@ -1967,18 +2051,12 @@ export default async function CataloguePage({ searchParams }: PageProps<"/">) {
           live in the address, so a filtered catalogue is a link you can share.
         </p>
       </div>
-      <Suspense fallback={<p className="text-slate-600">Loading the filter</p>}>
-        <CatalogueFilters
-          categorySlug={selection.categorySlug}
-          searchTerm={selection.searchTerm}
-        />
-      </Suspense>
-      <Suspense
-        key={`${selection.categorySlug ?? ""}-${selection.searchTerm ?? ""}`}
-        fallback={<CatalogueResultsPlaceholder />}
-      >
-        <CatalogueResults selection={selection} />
-      </Suspense>
+      <CatalogueFilters
+        categorySlug={selection.categorySlug}
+        searchTerm={selection.searchTerm}
+        inStockOnly={selection.inStockOnly}
+      />
+      <CatalogueResults selection={selection} />
     </div>
   );
 }
@@ -1987,6 +2065,7 @@ export default async function CataloguePage({ searchParams }: PageProps<"/">) {
 **`app/products/[slug]/page.tsx`**
 
 ```tsx
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -1997,6 +2076,14 @@ import { WishlistButton } from "@/components/WishlistButton";
 import { formatMoney } from "@/formatting/money";
 import { readSignedInCustomer } from "@/server/account";
 import { readProduct } from "@/server/catalogue";
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/products/[slug]">): Promise<Metadata> {
+  const { slug } = await params;
+  const answer = await readProduct(slug);
+  return { title: answer?.product?.name ?? "Product" };
+}
 
 export default async function ProductPage({
   params,
@@ -2063,13 +2150,17 @@ export default async function ProductPage({
 **`app/cart/page.tsx`**
 
 ```tsx
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ApiUnavailableNotice } from "@/components/ApiUnavailableNotice";
 import { CartLineRow } from "@/components/CartLineRow";
 import { CartSummary } from "@/components/CartSummary";
-import { PromotionCodeForm } from "@/components/PromotionCodeForm";
 import { readCart } from "@/server/cart";
+
+export const metadata: Metadata = {
+  title: "Cart",
+};
 
 export default async function CartPage() {
   const answer = await readCart();
@@ -2082,23 +2173,42 @@ export default async function CartPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-slate-900">Your cart</h1>
+      <h1 className="text-2xl font-semibold text-slate-900">Cart</h1>
       {cart.lines.length === 0 ? (
-        <p className="mt-4 text-slate-700">
-          Your cart is empty.{" "}
-          <Link href="/" className="underline">
-            Browse the catalogue
-          </Link>
-          .
-        </p>
+        <>
+          <p className="mt-4 text-slate-700">Your cart is empty.</p>
+          <p className="mt-2">
+            <Link href="/" className="underline">
+              Browse the catalogue
+            </Link>
+          </p>
+        </>
       ) : (
         <>
-          <ul className="mt-4">
-            {cart.lines.map((line) => (
-              <CartLineRow key={line.id} line={line} />
-            ))}
-          </ul>
-          <PromotionCodeForm appliedCode={cart.promotion?.code ?? null} />
+          <table className="mt-4 w-full text-sm">
+            <caption className="sr-only">The lines in your cart</caption>
+            <thead>
+              <tr className="border-b border-slate-300 text-left text-slate-600">
+                <th scope="col" className="py-2 font-normal">
+                  Product
+                </th>
+                <th scope="col" className="py-2 font-normal">
+                  Quantity
+                </th>
+                <th scope="col" className="py-2 text-right font-normal">
+                  Line total
+                </th>
+                <th scope="col" className="py-2 text-right font-normal">
+                  Remove
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {cart.lines.map((line) => (
+                <CartLineRow key={line.id} line={line} />
+              ))}
+            </tbody>
+          </table>
           <div className="mt-6">
             <CartSummary cart={cart} />
           </div>
@@ -2118,33 +2228,51 @@ export default async function CartPage() {
 **`app/checkout/page.tsx`**
 
 ```tsx
+import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 
 import { ApiUnavailableNotice } from "@/components/ApiUnavailableNotice";
 import { CartSummary } from "@/components/CartSummary";
 import { CheckoutForm } from "@/components/CheckoutForm";
+import { PromotionCodeForm } from "@/components/PromotionCodeForm";
 import { formatMoney } from "@/formatting/money";
-import { readSignedInCustomer } from "@/server/account";
+import { holdsAccessToken, readSignedInCustomer } from "@/server/account";
 import { readCart } from "@/server/cart";
 
+export const metadata: Metadata = {
+  title: "Checkout",
+};
+
 export default async function CheckoutPage() {
-  const [answer, customer] = await Promise.all([
+  const [answer, signedIn] = await Promise.all([
     readCart(),
     readSignedInCustomer(),
   ]);
 
-  if (answer === null || customer === null) {
+  if (answer === null || signedIn === null) {
     return <ApiUnavailableNotice subject="Your checkout" />;
   }
 
+  const customer = signedIn.me;
+  if (customer === null) {
+    redirect(
+      (await holdsAccessToken())
+        ? "/login?next=/checkout&sessionEnded=true"
+        : "/login?next=/checkout",
+    );
+  }
+
   const cart = answer.cart;
-  const signedIn = customer.me != null;
 
   return (
     <div>
       <h1 className="text-2xl font-semibold text-slate-900">Checkout</h1>
       <p className="mt-1 text-slate-700">
+        {customer.name}, check your order and place it.
+      </p>
+      <p className="mt-1 text-sm text-slate-600">
         Payment is simulated. Placing the order reserves the stock and empties
         your cart.
       </p>
@@ -2157,13 +2285,14 @@ export default async function CheckoutPage() {
           What you are ordering
         </h2>
         {cart.lines.length === 0 ? (
-          <p className="mt-2 text-slate-700">
-            Your cart is empty.{" "}
-            <Link href="/" className="underline">
-              Browse the catalogue
-            </Link>
-            .
-          </p>
+          <>
+            <p className="mt-2 text-slate-700">Your cart is empty.</p>
+            <p className="mt-2">
+              <Link href="/" className="underline">
+                Browse the catalogue
+              </Link>
+            </p>
+          </>
         ) : (
           <ul className="mt-2 divide-y divide-slate-200">
             {cart.lines.map((line) => (
@@ -2178,24 +2307,16 @@ export default async function CheckoutPage() {
         )}
       </section>
 
+      <PromotionCodeForm promotion={cart.promotion} />
+
       <div className="mt-6">
         <CartSummary cart={cart} />
       </div>
 
-      {signedIn ? (
-        <CheckoutForm
-          idempotencyKey={randomUUID()}
-          disabled={cart.lines.length === 0}
-        />
-      ) : (
-        <p className="mt-6 text-slate-700">
-          An order belongs to an account.{" "}
-          <Link href="/sign-in?next=/checkout" className="underline">
-            Sign in to place this order
-          </Link>
-          .
-        </p>
-      )}
+      <CheckoutForm
+        idempotencyKey={randomUUID()}
+        disabled={cart.lines.length === 0}
+      />
     </div>
   );
 }
@@ -2204,12 +2325,17 @@ export default async function CheckoutPage() {
 **`app/orders/[orderId]/page.tsx`**
 
 ```tsx
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ApiUnavailableNotice } from "@/components/ApiUnavailableNotice";
 import { OrderSummary } from "@/components/OrderSummary";
 import { readOrder } from "@/server/ordering";
+
+export const metadata: Metadata = {
+  title: "Your order",
+};
 
 export default async function OrderConfirmationPage({
   params,
@@ -2229,7 +2355,7 @@ export default async function OrderConfirmationPage({
   return (
     <div>
       <h1 className="text-2xl font-semibold text-slate-900">
-        Thank you, your order is placed
+        Thank you for your order
       </h1>
       <p className="mt-1 text-slate-700">
         Keep the order number. It is what the confirmation mail carries as well.
@@ -2253,16 +2379,21 @@ export default async function OrderConfirmationPage({
 **`app/account/page.tsx`**
 
 ```tsx
+import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { ApiUnavailableNotice } from "@/components/ApiUnavailableNotice";
 import { OrderSummary } from "@/components/OrderSummary";
 import { ProductCard } from "@/components/ProductCard";
 import { SessionList } from "@/components/SessionList";
-import { SignOutForm } from "@/components/SignOutForm";
 import { formatMoment } from "@/formatting/moment";
-import { readAccount } from "@/server/account";
+import { holdsAccessToken, readAccount } from "@/server/account";
 import { readOrderHistory } from "@/server/ordering";
+
+export const metadata: Metadata = {
+  title: "Your account",
+};
 
 export default async function AccountPage() {
   const account = await readAccount();
@@ -2273,13 +2404,16 @@ export default async function AccountPage() {
 
   const customer = account.me;
   if (customer === null) {
+    if (await holdsAccessToken()) {
+      redirect("/login?next=/account&sessionEnded=true");
+    }
     return (
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Your account</h1>
         <p className="mt-4 text-slate-700">
-          You are not signed in.{" "}
-          <Link href="/sign-in?next=/account" className="underline">
-            Sign in to see your orders and sessions
+          You are not logged in.{" "}
+          <Link href="/login?next=/account" className="underline">
+            Log in to see your orders and sessions
           </Link>
           .
         </p>
@@ -2293,21 +2427,16 @@ export default async function AccountPage() {
   return (
     <div className="space-y-10">
       <section aria-labelledby="account-heading">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1
-              id="account-heading"
-              className="text-2xl font-semibold text-slate-900"
-            >
-              Your account
-            </h1>
-            <p className="mt-1 text-slate-700">
-              {customer.name}, {customer.email}, registered{" "}
-              {formatMoment(customer.createdAt)}
-            </p>
-          </div>
-          <SignOutForm />
-        </div>
+        <h1
+          id="account-heading"
+          className="text-2xl font-semibold text-slate-900"
+        >
+          Your account
+        </h1>
+        <p className="mt-1 text-slate-700">
+          {customer.name}, {customer.email}, registered{" "}
+          {formatMoment(customer.createdAt)}
+        </p>
       </section>
 
       <section aria-labelledby="order-history-heading">
@@ -2332,14 +2461,13 @@ export default async function AccountPage() {
         )}
       </section>
 
-      <section aria-labelledby="sessions-heading">
-        <h2 id="sessions-heading" className="text-lg font-semibold text-slate-900">
-          Sessions
+      <section aria-labelledby="open-sessions-heading">
+        <h2
+          id="open-sessions-heading"
+          className="text-lg font-semibold text-slate-900"
+        >
+          Open sessions
         </h2>
-        <p className="mt-1 text-sm text-slate-700">
-          Every login of yours that is still open. Revoking one ends it at once,
-          on that device.
-        </p>
         <div className="mt-3">
           <SessionList sessions={customer.sessions} />
         </div>
@@ -2369,12 +2497,12 @@ export default async function AccountPage() {
 }
 ```
 
-**`app/sign-in/page.tsx`**
+**`app/login/page.tsx`**
 
 ```tsx
+import type { Metadata } from "next";
 import Link from "next/link";
 
-import { RegisterForm } from "@/components/RegisterForm";
 import { SignInForm } from "@/components/SignInForm";
 import { readSignedInCustomer } from "@/server/account";
 
@@ -2383,19 +2511,22 @@ function safeDestination(value: string | string[] | undefined): string {
   return single !== undefined && single.startsWith("/") ? single : "/account";
 }
 
-export default async function SignInPage({
-  searchParams,
-}: PageProps<"/sign-in">) {
+export const metadata: Metadata = {
+  title: "Log in",
+};
+
+export default async function LogInPage({ searchParams }: PageProps<"/login">) {
   const parameters = await searchParams;
   const destination = safeDestination(parameters.next);
+  const sessionEnded = parameters.sessionEnded !== undefined;
   const customer = await readSignedInCustomer();
 
   if (customer?.me != null) {
     return (
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Sign in</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">Log in</h1>
         <p className="mt-4 text-slate-700">
-          You are signed in as {customer.me.name}.{" "}
+          You are logged in as {customer.me.name}.{" "}
           <Link href="/account" className="underline">
             Go to your account
           </Link>
@@ -2406,37 +2537,93 @@ export default async function SignInPage({
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold text-slate-900">Sign in</h1>
-      <p className="mt-1 text-slate-700">
+    <div className="max-w-md">
+      <h1 className="text-2xl font-semibold text-slate-900">Log in</h1>
+      {sessionEnded ? (
+        <p
+          role="alert"
+          className="mt-4 rounded border border-amber-400 bg-amber-50 p-3 text-sm text-amber-900"
+        >
+          Your session has ended. Please log in again.
+        </p>
+      ) : null}
+      <p className="mt-2 text-slate-700">
         The seeded customer is jane@example.com with the password
-        &quot;correct horse battery staple&quot;. Products you saved while
-        signed out move to your account when you sign in.
+        &quot;correct horse battery staple&quot;.
       </p>
-      <div className="mt-6 grid gap-10 md:grid-cols-2">
-        <section aria-labelledby="sign-in-heading">
-          <h2
-            id="sign-in-heading"
-            className="text-lg font-semibold text-slate-900"
-          >
-            With an account
-          </h2>
-          <div className="mt-3">
-            <SignInForm destination={destination} />
-          </div>
-        </section>
-        <section aria-labelledby="register-heading">
-          <h2
-            id="register-heading"
-            className="text-lg font-semibold text-slate-900"
-          >
-            New here
-          </h2>
-          <div className="mt-3">
-            <RegisterForm destination={destination} />
-          </div>
-        </section>
+      <div className="mt-6">
+        <SignInForm destination={destination} />
       </div>
+      <p className="mt-6 text-sm text-slate-700">
+        No account yet?{" "}
+        <Link href="/register" className="underline">
+          Register
+        </Link>
+        .
+      </p>
+    </div>
+  );
+}
+```
+
+**`app/register/page.tsx`**
+
+```tsx
+import type { Metadata } from "next";
+import Link from "next/link";
+
+import { RegisterForm } from "@/components/RegisterForm";
+import { readSignedInCustomer } from "@/server/account";
+
+function safeDestination(value: string | string[] | undefined): string {
+  const single = Array.isArray(value) ? value[0] : value;
+  return single !== undefined && single.startsWith("/") ? single : "/account";
+}
+
+export const metadata: Metadata = {
+  title: "Register",
+};
+
+export default async function RegisterPage({
+  searchParams,
+}: PageProps<"/register">) {
+  const parameters = await searchParams;
+  const destination = safeDestination(parameters.next);
+  const customer = await readSignedInCustomer();
+
+  if (customer?.me != null) {
+    return (
+      <div>
+        <h1 className="text-2xl font-semibold text-slate-900">Register</h1>
+        <p className="mt-4 text-slate-700">
+          You already have an account and you are logged in as{" "}
+          {customer.me.name}.{" "}
+          <Link href="/account" className="underline">
+            Go to your account
+          </Link>
+          .
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-md">
+      <h1 className="text-2xl font-semibold text-slate-900">Register</h1>
+      <p className="mt-2 text-slate-700">
+        An account keeps your orders, your sessions and your wishlist. The cart
+        and the wishlist you filled while logged out move with you.
+      </p>
+      <div className="mt-6">
+        <RegisterForm destination={destination} />
+      </div>
+      <p className="mt-6 text-sm text-slate-700">
+        Already registered?{" "}
+        <Link href="/login" className="underline">
+          Log in
+        </Link>
+        .
+      </p>
     </div>
   );
 }
@@ -2445,11 +2632,16 @@ export default async function SignInPage({
 **`app/wishlist/page.tsx`**
 
 ```tsx
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ApiUnavailableNotice } from "@/components/ApiUnavailableNotice";
 import { ProductCard } from "@/components/ProductCard";
 import { readSignedInCustomer, readWishlist } from "@/server/account";
+
+export const metadata: Metadata = {
+  title: "Your wishlist",
+};
 
 export default async function WishlistPage() {
   const [answer, customer] = await Promise.all([
@@ -2471,8 +2663,8 @@ export default async function WishlistPage() {
         <p className="mt-1 text-slate-700">
           This list belongs to your browser until you sign in, and it moves to
           your account when you do.{" "}
-          <Link href="/sign-in?next=/wishlist" className="underline">
-            Sign in to keep it
+          <Link href="/login?next=/wishlist" className="underline">
+            Log in to keep it
           </Link>
           .
         </p>
@@ -2502,7 +2694,12 @@ export default async function WishlistPage() {
 **`app/not-found.tsx`**
 
 ```tsx
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Page not found",
+};
 
 export default function NotFoundPage() {
   return (
@@ -2646,54 +2843,25 @@ export async function GET(
 
 Plain Tailwind, the same layout as the other two frontends: a header with the
 cart count and the wishlist, a content column of at most `max-w-5xl`, a footer.
-Ten components carry `"use client"`, and each has one reason. Eight of them use
-`useActionState`, which is what renders a refusal from the contract next to the
-field that caused it. `SubmitButton` uses `useFormStatus` to disable itself
-while its form is in flight. `SessionRefresher` owns the timer that keeps the
-login alive. Everything else renders on the server.
 
 **`components/SiteHeader.tsx`**
 
 ```tsx
 import Link from "next/link";
-import { Suspense } from "react";
 
+import { SubmitButton } from "@/components/SubmitButton";
+import { signOut } from "@/server/actions/accountActions";
 import { readSignedInCustomer } from "@/server/account";
 import { countCartItems, readCart } from "@/server/cart";
 
-async function HeaderVisitorLinks() {
+export async function SiteHeader() {
   const [customer, cart] = await Promise.all([
     readSignedInCustomer(),
     readCart(),
   ]);
   const signedIn = customer?.me != null;
+  const savedProductCount = customer?.wishlist.length ?? 0;
 
-  return (
-    <>
-      <Link href="/wishlist" className="text-sm text-slate-700 hover:underline">
-        Wishlist ({customer?.wishlist.length ?? 0})
-      </Link>
-      <Link href="/cart" className="text-sm text-slate-700 hover:underline">
-        Cart ({countCartItems(cart)})
-      </Link>
-      {signedIn ? (
-        <Link href="/account" className="text-sm text-slate-700 hover:underline">
-          Account
-        </Link>
-      ) : (
-        <Link href="/sign-in" className="text-sm text-slate-700 hover:underline">
-          Sign in
-        </Link>
-      )}
-    </>
-  );
-}
-
-function HeaderVisitorLinksPlaceholder() {
-  return <span className="text-sm text-slate-400">Loading your basket</span>;
-}
-
-export function SiteHeader() {
   return (
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-4 py-4">
@@ -2704,9 +2872,39 @@ export function SiteHeader() {
           <Link href="/" className="text-sm text-slate-700 hover:underline">
             Catalogue
           </Link>
-          <Suspense fallback={<HeaderVisitorLinksPlaceholder />}>
-            <HeaderVisitorLinks />
-          </Suspense>
+          <Link
+            href="/wishlist"
+            className="text-sm text-slate-700 hover:underline"
+          >
+            Wishlist, {savedProductCount} saved
+          </Link>
+          <Link href="/cart" className="text-sm text-slate-700 hover:underline">
+            Cart, {countCartItems(cart)} {countCartItems(cart) === 1 ? "item" : "items"}
+          </Link>
+          {signedIn ? (
+            <>
+              <Link
+                href="/account"
+                className="text-sm text-slate-700 hover:underline"
+              >
+                Your account
+              </Link>
+              <form action={signOut}>
+                <SubmitButton
+                  label="Log out"
+                  busyLabel="Logging out"
+                  tone="secondary"
+                />
+              </form>
+            </>
+          ) : (
+            <Link
+              href="/login"
+              className="text-sm text-slate-700 hover:underline"
+            >
+              Log in
+            </Link>
+          )}
         </nav>
       </div>
     </header>
@@ -2735,6 +2933,42 @@ export function SiteFooter() {
 }
 ```
 
+**`components/PoliteRouteAnnouncer.tsx`**
+
+```tsx
+"use client";
+
+import { useInsertionEffect } from "react";
+
+const announcerElementName = "next-route-announcer";
+const announcerIdentifier = "__next-route-announcer__";
+const visuallyHidden =
+  "position:absolute;border:0;height:1px;margin:-1px;padding:0;width:1px;clip:rect(0 0 0 0);overflow:hidden;white-space:nowrap;word-wrap:normal";
+
+function installPoliteAnnouncer(): void {
+  if (document.getElementsByName(announcerElementName).length > 0) {
+    return;
+  }
+  const container = document.createElement(announcerElementName);
+  container.setAttribute("name", announcerElementName);
+  container.style.cssText = "position:absolute";
+  const announcement = document.createElement("div");
+  announcement.id = announcerIdentifier;
+  announcement.setAttribute("aria-live", "polite");
+  announcement.setAttribute("aria-atomic", "true");
+  announcement.style.cssText = visuallyHidden;
+  container.attachShadow({ mode: "open" }).appendChild(announcement);
+  document.body.appendChild(container);
+}
+
+export function PoliteRouteAnnouncer() {
+  useInsertionEffect(() => {
+    installPoliteAnnouncer();
+  }, []);
+  return null;
+}
+```
+
 **`components/CatalogueFilters.tsx`**
 
 ```tsx
@@ -2743,9 +2977,11 @@ import { readCategories } from "@/server/catalogue";
 export async function CatalogueFilters({
   categorySlug,
   searchTerm,
+  inStockOnly,
 }: {
   categorySlug: string | null;
   searchTerm: string | null;
+  inStockOnly: boolean;
 }) {
   const answer = await readCategories();
   const categories = answer?.categories ?? [];
@@ -2755,8 +2991,24 @@ export async function CatalogueFilters({
       role="search"
       method="get"
       action="/"
-      className="flex flex-wrap items-end gap-3 rounded border border-slate-200 bg-white p-4"
+      className="flex flex-wrap items-end gap-4 rounded border border-slate-200 bg-white p-4"
     >
+      <div>
+        <label
+          htmlFor="catalogue-search"
+          className="block text-xs font-medium text-slate-600"
+        >
+          Search by name
+        </label>
+        <input
+          id="catalogue-search"
+          name="search"
+          type="search"
+          defaultValue={searchTerm ?? ""}
+          placeholder="jacket"
+          className="mt-1 w-56 rounded border border-slate-400 px-2 py-2 text-sm"
+        />
+      </div>
       <div>
         <label
           htmlFor="catalogue-category"
@@ -2778,27 +3030,27 @@ export async function CatalogueFilters({
           ))}
         </select>
       </div>
-      <div>
-        <label
-          htmlFor="catalogue-search"
-          className="block text-xs font-medium text-slate-600"
-        >
-          Search by name
-        </label>
+      <div className="flex items-center gap-2 pb-2">
         <input
-          id="catalogue-search"
-          name="search"
-          type="search"
-          defaultValue={searchTerm ?? ""}
-          placeholder="jacket"
-          className="mt-1 w-56 rounded border border-slate-400 px-2 py-2 text-sm"
+          id="catalogue-in-stock-only"
+          name="inStockOnly"
+          type="checkbox"
+          value="true"
+          defaultChecked={inStockOnly}
+          className="size-4 rounded border-slate-400"
         />
+        <label
+          htmlFor="catalogue-in-stock-only"
+          className="text-sm text-slate-700"
+        >
+          In stock only
+        </label>
       </div>
       <button
         type="submit"
         className="rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700"
       >
-        Show products
+        Filter
       </button>
     </form>
   );
@@ -2859,22 +3111,6 @@ export async function CatalogueResults({
     </div>
   );
 }
-
-export function CatalogueResultsPlaceholder() {
-  return (
-    <ul
-      aria-hidden="true"
-      className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-    >
-      {[0, 1, 2, 3, 4, 5].map((position) => (
-        <li
-          key={position}
-          className="h-80 animate-pulse rounded border border-slate-200 bg-slate-100"
-        />
-      ))}
-    </ul>
-  );
-}
 ```
 
 **`components/ProductCard.tsx`**
@@ -2897,9 +3133,9 @@ export function ProductCard({
 }) {
   return (
     <article className="flex w-full flex-col rounded border border-slate-200 bg-white p-4">
-      <Link href={`/products/${product.slug}`} className="self-center">
+      <div className="self-center">
         <ProductImage imageUrl={product.imageUrl} size={160} />
-      </Link>
+      </div>
       <h3 className="mt-3 text-base font-semibold text-slate-900">
         <Link href={`/products/${product.slug}`} className="hover:underline">
           {product.name}
@@ -3067,7 +3303,6 @@ export function WishlistButton({
 
 import { useActionState } from "react";
 
-import { ProductImage } from "@/components/ProductImage";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UserErrorMessages } from "@/components/UserErrorMessages";
 import { formatMoney } from "@/formatting/money";
@@ -3078,34 +3313,31 @@ import {
 } from "@/server/actions/cartActions";
 import { untouchedAction } from "@/server/actionState";
 
-export function CartLineRow({ line }: { line: CartDetailFragment["lines"][number] }) {
+export function CartLineRow({
+  line,
+}: {
+  line: CartDetailFragment["lines"][number];
+}) {
   const [quantityState, changeQuantity] = useActionState(
     changeCartLineQuantity,
     untouchedAction,
   );
-  const [removalState, remove] = useActionState(
-    removeCartLine,
-    untouchedAction,
-  );
+  const [removalState, remove] = useActionState(removeCartLine, untouchedAction);
   const quantityFieldId = `line-quantity-${line.id}`;
 
   return (
-    <li className="flex flex-wrap items-center gap-4 border-b border-slate-200 py-4">
-      <ProductImage imageUrl={line.product.imageUrl} size={64} />
-      <div className="min-w-48 flex-1">
-        <p className="font-medium text-slate-900">{line.product.name}</p>
-        <p className="text-sm text-slate-600">
+    <tr className="border-b border-slate-200 align-top">
+      <th scope="row" className="py-4 text-left font-medium text-slate-900">
+        {line.product.name}
+        <span className="block text-sm font-normal text-slate-600">
           {formatMoney(line.product.price)} each
-        </p>
-      </div>
-      <form action={changeQuantity} className="flex items-end gap-2">
-        <input type="hidden" name="lineId" value={line.id} />
-        <div>
-          <label
-            htmlFor={quantityFieldId}
-            className="block text-xs font-medium text-slate-600"
-          >
-            Quantity
+        </span>
+      </th>
+      <td className="py-4">
+        <form action={changeQuantity} className="flex items-center gap-2">
+          <input type="hidden" name="lineId" value={line.id} />
+          <label htmlFor={quantityFieldId} className="sr-only">
+            Quantity of {line.product.name}
           </label>
           <input
             id={quantityFieldId}
@@ -3113,26 +3345,30 @@ export function CartLineRow({ line }: { line: CartDetailFragment["lines"][number
             type="number"
             min={1}
             defaultValue={line.quantity}
-            className="mt-1 w-20 rounded border border-slate-400 px-2 py-1 text-sm"
+            className="w-20 rounded border border-slate-400 px-2 py-1 text-sm"
           />
-        </div>
-        <SubmitButton label="Update" busyLabel="Updating" tone="secondary" />
-      </form>
-      <p className="w-24 text-right font-medium text-slate-900">
-        {formatMoney(line.lineTotal)}
-      </p>
-      <form action={remove}>
-        <input type="hidden" name="lineId" value={line.id} />
-        <SubmitButton label="Remove" busyLabel="Removing" tone="secondary" />
-      </form>
-      <div className="w-full">
+          <SubmitButton label="Update" busyLabel="Updating" tone="secondary" />
+        </form>
         <UserErrorMessages
           errors={quantityState.errors}
           availableStock={quantityState.availableStock}
         />
+      </td>
+      <td className="py-4 text-right font-medium text-slate-900">
+        {formatMoney(line.lineTotal)}
+      </td>
+      <td className="py-4 text-right">
+        <form action={remove}>
+          <input type="hidden" name="lineId" value={line.id} />
+          <SubmitButton
+            label={`Remove ${line.product.name}`}
+            busyLabel="Removing"
+            tone="secondary"
+          />
+        </form>
         <UserErrorMessages errors={removalState.errors} />
-      </div>
-    </li>
+      </td>
+    </tr>
   );
 }
 ```
@@ -3198,16 +3434,27 @@ import { useActionState } from "react";
 
 import { SubmitButton } from "@/components/SubmitButton";
 import { UserErrorMessages } from "@/components/UserErrorMessages";
+import { formatMoney } from "@/formatting/money";
+import type { CartDetailFragment } from "@/graphql/generated/graphql";
 import {
   applyPromotionCode,
   removePromotionCode,
 } from "@/server/actions/cartActions";
 import { untouchedAction } from "@/server/actionState";
 
+function promotionSentence(
+  promotion: NonNullable<CartDetailFragment["promotion"]>,
+): string {
+  if (promotion.kind === "FREE_SHIPPING") {
+    return `${promotion.code} makes the shipping free.`;
+  }
+  return `${promotion.code} takes off ${formatMoney(promotion.discount)}.`;
+}
+
 export function PromotionCodeForm({
-  appliedCode,
+  promotion,
 }: {
-  appliedCode: string | null;
+  promotion: CartDetailFragment["promotion"];
 }) {
   const [applyState, apply] = useActionState(
     applyPromotionCode,
@@ -3222,30 +3469,28 @@ export function PromotionCodeForm({
       >
         Promotion code
       </h2>
-      {appliedCode === null ? (
+      {promotion === null ? (
         <form action={apply} className="mt-2 flex items-end gap-2">
           <div>
             <label
               htmlFor="promotion-code"
               className="block text-xs font-medium text-slate-600"
             >
-              Code
+              Promotion code
             </label>
             <input
               id="promotion-code"
               name="code"
               type="text"
               autoComplete="off"
-              className="mt-1 w-40 rounded border border-slate-400 px-2 py-1 text-sm uppercase"
+              className="mt-1 w-44 rounded border border-slate-400 px-2 py-1 text-sm uppercase"
             />
           </div>
-          <SubmitButton label="Apply" busyLabel="Applying" tone="secondary" />
+          <SubmitButton label="Apply code" busyLabel="Applying" tone="secondary" />
         </form>
       ) : (
         <form action={removePromotionCode} className="mt-2 flex items-center gap-3">
-          <p className="text-sm text-slate-700">
-            <span className="font-medium">{appliedCode}</span> is applied.
-          </p>
+          <p className="text-sm text-slate-700">{promotionSentence(promotion)}</p>
           <SubmitButton label="Remove code" busyLabel="Removing" tone="secondary" />
         </form>
       )}
@@ -3358,13 +3603,23 @@ export function OrderSummary({ order }: { order: OrderDetailFragment }) {
             </th>
             <td className="py-1 text-right">{formatMoney(order.shipping)}</td>
           </tr>
+          {order.promotionCode === null ? null : (
+            <tr>
+              <th
+                scope="row"
+                className="py-1 text-left font-normal text-slate-600"
+              >
+                Promotion code
+              </th>
+              <td className="py-1 text-right">{order.promotionCode}</td>
+            </tr>
+          )}
           <tr>
             <th
               scope="row"
               className="py-1 text-left font-normal text-slate-600"
             >
               Discount
-              {order.promotionCode === null ? "" : `, ${order.promotionCode}`}
             </th>
             <td className="py-1 text-right">{formatMoney(order.discount)}</td>
           </tr>
@@ -3403,13 +3658,13 @@ export function SignInForm({ destination }: { destination: string }) {
       <input type="hidden" name="destination" value={destination} />
       <div>
         <label
-          htmlFor="sign-in-email"
+          htmlFor="log-in-email"
           className="block text-sm font-medium text-slate-700"
         >
           Email address
         </label>
         <input
-          id="sign-in-email"
+          id="log-in-email"
           name="email"
           type="email"
           autoComplete="email"
@@ -3419,13 +3674,13 @@ export function SignInForm({ destination }: { destination: string }) {
       </div>
       <div>
         <label
-          htmlFor="sign-in-password"
+          htmlFor="log-in-password"
           className="block text-sm font-medium text-slate-700"
         >
           Password
         </label>
         <input
-          id="sign-in-password"
+          id="log-in-password"
           name="password"
           type="password"
           autoComplete="current-password"
@@ -3435,13 +3690,13 @@ export function SignInForm({ destination }: { destination: string }) {
       </div>
       <div>
         <label
-          htmlFor="sign-in-device"
+          htmlFor="log-in-device"
           className="block text-sm font-medium text-slate-700"
         >
           Device description
         </label>
         <input
-          id="sign-in-device"
+          id="log-in-device"
           name="device"
           type="text"
           placeholder="Chrome on Windows"
@@ -3451,7 +3706,7 @@ export function SignInForm({ destination }: { destination: string }) {
           It labels this login in your session list, so you recognise it later.
         </p>
       </div>
-      <SubmitButton label="Sign in" busyLabel="Signing in" />
+      <SubmitButton label="Log in" busyLabel="Logging in" />
       <UserErrorMessages errors={state.errors} />
     </form>
   );
@@ -3528,23 +3783,8 @@ export function RegisterForm({ destination }: { destination: string }) {
           At least twelve characters, as the security model asks for.
         </p>
       </div>
-      <SubmitButton label="Create account" busyLabel="Creating your account" />
+      <SubmitButton label="Register" busyLabel="Registering" />
       <UserErrorMessages errors={state.errors} />
-    </form>
-  );
-}
-```
-
-**`components/SignOutForm.tsx`**
-
-```tsx
-import { SubmitButton } from "@/components/SubmitButton";
-import { signOut } from "@/server/actions/accountActions";
-
-export function SignOutForm() {
-  return (
-    <form action={signOut}>
-      <SubmitButton label="Sign out" busyLabel="Signing out" tone="secondary" />
     </form>
   );
 }
@@ -3799,9 +4039,9 @@ const sentenceByCode: Record<string, string> = {
   PASSWORD_TOO_LONG: "A password takes at most one hundred and twenty eight characters.",
   CREDENTIALS_INVALID: "That email address and password do not match an account.",
   RATE_LIMITED: "Too many attempts. Wait a moment and try again.",
-  SESSION_INVALID: "Your session has ended. Sign in again.",
+  SESSION_INVALID: "Your session has ended. Please log in again.",
   SESSION_NOT_FOUND: "That session has already ended.",
-  NOT_AUTHENTICATED: "Sign in to continue.",
+  NOT_AUTHENTICATED: "Log in to continue.",
   ORDER_NOT_FOUND: "That order does not belong to this account.",
 };
 
@@ -4043,6 +4283,64 @@ describe("reading what the api set", () => {
       refreshCookie: "refresh-1",
       cartCookie: "cart-2",
     });
+  });
+});
+```
+
+**`tests/units/politeRouteAnnouncer.test.tsx`**
+
+```tsx
+import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it } from "vitest";
+
+import { PoliteRouteAnnouncer } from "@/components/PoliteRouteAnnouncer";
+
+function announcerElement(): Element | null {
+  const container = document.getElementsByName("next-route-announcer")[0];
+  return container?.shadowRoot?.firstElementChild ?? null;
+}
+
+describe("the route announcer the store front installs", () => {
+  beforeEach(() => {
+    for (const container of Array.from(
+      document.getElementsByTagName("next-route-announcer"),
+    )) {
+      container.remove();
+    }
+  });
+
+  it("announces politely and carries no live region role", () => {
+    render(<PoliteRouteAnnouncer />);
+
+    const announcer = announcerElement();
+    expect(announcer).not.toBeNull();
+    expect(announcer).toHaveAttribute("aria-live", "polite");
+    expect(announcer).toHaveAttribute("aria-atomic", "true");
+    expect(announcer).not.toHaveAttribute("role");
+  });
+
+  it("leaves an alert on the screen as the only alert", () => {
+    render(
+      <>
+        <PoliteRouteAnnouncer />
+        <p role="alert">Your session has ended. Please log in again.</p>
+      </>,
+    );
+
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
+  });
+
+  it("installs one announcer even when it is rendered twice", () => {
+    render(
+      <>
+        <PoliteRouteAnnouncer />
+        <PoliteRouteAnnouncer />
+      </>,
+    );
+
+    expect(
+      document.getElementsByTagName("next-route-announcer"),
+    ).toHaveLength(1);
   });
 });
 ```
@@ -4678,7 +4976,6 @@ vi.mock("@/components/CatalogueResults", () => ({
       {selection.searchTerm ?? "every name"}
     </p>
   ),
-  CatalogueResultsPlaceholder: () => <p>loading the catalogue</p>,
 }));
 
 import CataloguePage from "@/app/page";
@@ -4754,7 +5051,11 @@ import { CatalogueResults } from "@/components/CatalogueResults";
 
 import { backpack, princessRing } from "../support/seedFixtures";
 
-const wholeCatalogue = { categorySlug: null, searchTerm: null };
+const wholeCatalogue = {
+  categorySlug: null,
+  searchTerm: null,
+  inStockOnly: false,
+};
 
 function catalogueOf(products: readonly { id: string }[]) {
   return {
@@ -4802,7 +5103,11 @@ describe("the product grid on the catalogue screen", () => {
 
     render(
       await CatalogueResults({
-        selection: { categorySlug: null, searchTerm: "nothing" },
+        selection: {
+          categorySlug: null,
+          searchTerm: "nothing",
+          inStockOnly: false,
+        },
       }),
     );
 
@@ -4932,71 +5237,50 @@ vi.mock("@/server/cart", () => ({
 vi.mock("@/server/actions/cartActions", () => ({
   changeCartLineQuantity: vi.fn(),
   removeCartLine: vi.fn(),
-  applyPromotionCode: vi.fn(),
-  removePromotionCode: vi.fn(),
 }));
 
 import CartPage from "@/app/cart/page";
 
-import { emptyCart, filledCart } from "../support/seedFixtures";
+import { backpack, emptyCart, filledCart } from "../support/seedFixtures";
 
 describe("the cart screen", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("lists the lines, the totals and the way to the checkout", async () => {
+  it("lists every line as a row with its quantity, its total and its remove button", async () => {
     mocked.readCart.mockResolvedValue({ cart: filledCart });
 
     render(await CartPage());
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Your cart" }),
+      screen.getByRole("heading", { level: 1, name: "Cart" }),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole("listitem")).toHaveLength(1);
-    expect(screen.getByRole("spinbutton", { name: "Quantity" })).toHaveValue(1);
-    expect(screen.getByRole("button", { name: "Update" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
     expect(
-      screen.getByRole("rowheader", { name: "Total" }),
+      screen.getByRole("rowheader", { name: new RegExp(backpack.name) }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("spinbutton", { name: `Quantity of ${backpack.name}` }),
+    ).toHaveValue(1);
+    expect(screen.getByRole("button", { name: "Update" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: `Remove ${backpack.name}` }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the totals and the way to the checkout", async () => {
+    mocked.readCart.mockResolvedValue({ cart: filledCart });
+
+    render(await CartPage());
+
+    expect(screen.getByRole("rowheader", { name: "Total" })).toBeInTheDocument();
     expect(screen.getByRole("table", { name: "Totals" })).toHaveTextContent(
       "€109.95",
     );
-    expect(
-      screen.getByRole("link", { name: "Go to checkout" }),
-    ).toHaveAttribute("href", "/checkout");
-  });
-
-  it("offers the promotion code field while no code is applied", async () => {
-    mocked.readCart.mockResolvedValue({ cart: filledCart });
-
-    render(await CartPage());
-
-    expect(screen.getByRole("textbox", { name: "Code" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Apply" })).toBeInTheDocument();
-  });
-
-  it("offers to remove the code that is applied", async () => {
-    mocked.readCart.mockResolvedValue({
-      cart: {
-        ...filledCart,
-        promotion: {
-          code: "WELCOME10",
-          kind: "PERCENTAGE",
-          discount: { amount: 1100, currency: "EUR" },
-        },
-      },
-    });
-
-    render(await CartPage());
-
-    expect(
-      screen.getByRole("button", { name: "Remove code" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("rowheader", { name: "Discount, WELCOME10" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Go to checkout" })).toHaveAttribute(
+      "href",
+      "/checkout",
+    );
   });
 
   it("points an empty cart back at the catalogue", async () => {
@@ -5004,6 +5288,7 @@ describe("the cart screen", () => {
 
     render(await CartPage());
 
+    expect(screen.getByText("Your cart is empty.")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Browse the catalogue" }),
     ).toHaveAttribute("href", "/");
@@ -5030,6 +5315,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocked = vi.hoisted(() => ({
   readCart: vi.fn(),
   readSignedInCustomer: vi.fn(),
+  holdsAccessToken: vi.fn(),
+  redirect: vi.fn((destination: string) => {
+    throw new Error(`redirected to ${destination}`);
+  }),
 }));
 
 vi.mock("@/server/cart", () => ({
@@ -5038,27 +5327,44 @@ vi.mock("@/server/cart", () => ({
 
 vi.mock("@/server/account", () => ({
   readSignedInCustomer: mocked.readSignedInCustomer,
+  holdsAccessToken: mocked.holdsAccessToken,
 }));
 
 vi.mock("@/server/actions/orderingActions", () => ({
   placeOrder: vi.fn(),
 }));
 
+vi.mock("@/server/actions/cartActions", () => ({
+  applyPromotionCode: vi.fn(),
+  removePromotionCode: vi.fn(),
+}));
+
+vi.mock("next/navigation", () => ({
+  redirect: mocked.redirect,
+}));
+
 import CheckoutPage from "@/app/checkout/page";
 
 import { emptyCart, filledCart, signedInCustomer } from "../support/seedFixtures";
 
+const loggedIn = {
+  me: {
+    id: signedInCustomer.id,
+    name: signedInCustomer.name,
+    email: signedInCustomer.email,
+  },
+  wishlist: [],
+};
+
 describe("the checkout screen", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocked.holdsAccessToken.mockResolvedValue(false);
   });
 
-  it("shows what is being ordered, the totals and the order button", async () => {
+  it("greets the customer, shows the order, the promotion field and the totals", async () => {
     mocked.readCart.mockResolvedValue({ cart: filledCart });
-    mocked.readSignedInCustomer.mockResolvedValue({
-      me: { id: signedInCustomer.id, name: signedInCustomer.name, email: signedInCustomer.email },
-      wishlist: [],
-    });
+    mocked.readSignedInCustomer.mockResolvedValue(loggedIn);
 
     render(await CheckoutPage());
 
@@ -5066,43 +5372,69 @@ describe("the checkout screen", () => {
       screen.getByRole("heading", { level: 1, name: "Checkout" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { level: 2, name: "What you are ordering" }),
+      screen.getByText("Jane Doe, check your order and place it."),
     ).toBeInTheDocument();
-    expect(screen.getByRole("listitem")).toHaveTextContent("1 × Fjallraven");
+    expect(
+      screen.getByRole("textbox", { name: "Promotion code" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Apply code" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("table", { name: "Totals" })).toHaveTextContent(
       "€109.95",
     );
+    expect(screen.getByRole("button", { name: "Place order" })).toBeEnabled();
+  });
+
+  it("says what an applied code takes off", async () => {
+    mocked.readCart.mockResolvedValue({
+      cart: {
+        ...filledCart,
+        promotion: {
+          code: "WELCOME10",
+          kind: "PERCENTAGE",
+          discount: { amount: 1100, currency: "EUR" },
+        },
+      },
+    });
+    mocked.readSignedInCustomer.mockResolvedValue(loggedIn);
+
+    render(await CheckoutPage());
+
     expect(
-      screen.getByRole("button", { name: "Place order" }),
-    ).toBeEnabled();
+      screen.getByText("WELCOME10 takes off €11.00."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Remove code" }),
+    ).toBeInTheDocument();
   });
 
   it("cannot place an order from an empty cart", async () => {
     mocked.readCart.mockResolvedValue({ cart: emptyCart });
-    mocked.readSignedInCustomer.mockResolvedValue({
-      me: { id: signedInCustomer.id, name: signedInCustomer.name, email: signedInCustomer.email },
-      wishlist: [],
-    });
+    mocked.readSignedInCustomer.mockResolvedValue(loggedIn);
 
     render(await CheckoutPage());
 
-    expect(
-      screen.getByRole("button", { name: "Place order" }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Place order" })).toBeDisabled();
   });
 
-  it("asks a visitor without an account to sign in first", async () => {
+  it("sends a visitor without an account to the log in screen", async () => {
     mocked.readCart.mockResolvedValue({ cart: filledCart });
     mocked.readSignedInCustomer.mockResolvedValue({ me: null, wishlist: [] });
 
-    render(await CheckoutPage());
+    await expect(CheckoutPage()).rejects.toThrow(
+      "redirected to /login?next=/checkout",
+    );
+  });
 
-    expect(
-      screen.getByRole("link", { name: "Sign in to place this order" }),
-    ).toHaveAttribute("href", "/sign-in?next=/checkout");
-    expect(
-      screen.queryByRole("button", { name: "Place order" }),
-    ).not.toBeInTheDocument();
+  it("says the session ended when the cookie still holds a dead token", async () => {
+    mocked.readCart.mockResolvedValue({ cart: filledCart });
+    mocked.readSignedInCustomer.mockResolvedValue({ me: null, wishlist: [] });
+    mocked.holdsAccessToken.mockResolvedValue(true);
+
+    await expect(CheckoutPage()).rejects.toThrow(
+      "redirected to /login?next=/checkout&sessionEnded=true",
+    );
   });
 
   it("says so when the api does not answer", async () => {
@@ -5156,7 +5488,7 @@ describe("the order confirmation screen", () => {
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: "Thank you, your order is placed",
+        name: "Thank you for your order",
       }),
     ).toBeInTheDocument();
     expect(
@@ -5169,8 +5501,9 @@ describe("the order confirmation screen", () => {
       "€98.95",
     );
     expect(
-      screen.getByRole("rowheader", { name: "Discount, WELCOME10" }),
+      screen.getByRole("rowheader", { name: "Promotion code" }),
     ).toBeInTheDocument();
+    expect(screen.getByText("WELCOME10", { exact: true })).toBeInTheDocument();
   });
 
   it("offers the way back to the catalogue and to the order history", async () => {
@@ -5201,16 +5534,21 @@ describe("the order confirmation screen", () => {
 **`tests/screens/accountPage.test.tsx`**
 
 ```tsx
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({
   readAccount: vi.fn(),
+  holdsAccessToken: vi.fn(),
   readOrderHistory: vi.fn(),
+  redirect: vi.fn((destination: string) => {
+    throw new Error(`redirected to ${destination}`);
+  }),
 }));
 
 vi.mock("@/server/account", () => ({
   readAccount: mocked.readAccount,
+  holdsAccessToken: mocked.holdsAccessToken,
 }));
 
 vi.mock("@/server/ordering", () => ({
@@ -5219,7 +5557,6 @@ vi.mock("@/server/ordering", () => ({
 
 vi.mock("@/server/actions/accountActions", () => ({
   revokeSession: vi.fn(),
-  signOut: vi.fn(),
 }));
 
 vi.mock("@/server/actions/cartActions", () => ({
@@ -5231,17 +5568,25 @@ vi.mock("@/server/actions/wishlistActions", () => ({
   removeProductFromWishlist: vi.fn(),
 }));
 
+vi.mock("next/navigation", () => ({
+  redirect: mocked.redirect,
+}));
+
 import AccountPage from "@/app/account/page";
 
-import { backpack, placedOrder, signedInCustomer } from "../support/seedFixtures";
+import {
+  backpack,
+  placedOrder,
+  signedInCustomer,
+} from "../support/seedFixtures";
 
 describe("the account screen", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    window.localStorage.clear();
+    mocked.holdsAccessToken.mockResolvedValue(false);
   });
 
-  it("names the customer and carries the order history, the sessions and the wishlist", async () => {
+  it("names the customer and carries the order history and the wishlist", async () => {
     mocked.readAccount.mockResolvedValue({ me: signedInCustomer });
     mocked.readOrderHistory.mockResolvedValue({
       orders: {
@@ -5257,22 +5602,27 @@ describe("the account screen", () => {
       screen.getByRole("heading", { level: 1, name: "Your account" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { level: 2, name: "Order history" }),
-    ).toBeInTheDocument();
-    expect(
       screen.getByRole("heading", { level: 3, name: "Order ZM-1001" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { level: 2, name: "Sessions" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Revoke Safari on iPhone" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { level: 3, name: backpack.name }),
     ).toBeInTheDocument();
+  });
+
+  it("lists one open session per device and offers to revoke the other one", async () => {
+    mocked.readAccount.mockResolvedValue({ me: signedInCustomer });
+    mocked.readOrderHistory.mockResolvedValue(null);
+
+    render(await AccountPage());
+
+    const openSessions = within(
+      screen.getByRole("region", { name: "Open sessions" }),
+    );
+    const entries = openSessions.getAllByRole("listitem");
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toHaveTextContent("(this device)");
     expect(
-      screen.getByRole("button", { name: "Sign out" }),
+      openSessions.getByRole("button", { name: "Revoke Safari on iPhone" }),
     ).toBeInTheDocument();
   });
 
@@ -5296,16 +5646,25 @@ describe("the account screen", () => {
     expect(screen.getByText("Your wishlist is empty.")).toBeInTheDocument();
   });
 
-  it("asks a visitor without a session to sign in", async () => {
+  it("asks a visitor without a session to log in", async () => {
     mocked.readAccount.mockResolvedValue({ me: null });
 
     render(await AccountPage());
 
     expect(
       screen.getByRole("link", {
-        name: "Sign in to see your orders and sessions",
+        name: "Log in to see your orders and sessions",
       }),
-    ).toHaveAttribute("href", "/sign-in?next=/account");
+    ).toHaveAttribute("href", "/login?next=/account");
+  });
+
+  it("sends a visitor whose session was revoked to the log in screen", async () => {
+    mocked.readAccount.mockResolvedValue({ me: null });
+    mocked.holdsAccessToken.mockResolvedValue(true);
+
+    await expect(AccountPage()).rejects.toThrow(
+      "redirected to /login?next=/account&sessionEnded=true",
+    );
   });
 
   it("says so when the api does not answer", async () => {
@@ -5377,7 +5736,7 @@ describe("the wishlist screen", () => {
       screen.getByRole("button", { name: "Remove from wishlist" }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("link", { name: "Sign in to keep it" }),
+      screen.queryByRole("link", { name: "Log in to keep it" }),
     ).not.toBeInTheDocument();
   });
 
@@ -5391,8 +5750,8 @@ describe("the wishlist screen", () => {
     render(await WishlistPage());
 
     expect(
-      screen.getByRole("link", { name: "Sign in to keep it" }),
-    ).toHaveAttribute("href", "/sign-in?next=/wishlist");
+      screen.getByRole("link", { name: "Log in to keep it" }),
+    ).toHaveAttribute("href", "/login?next=/wishlist");
     expect(
       screen.getByRole("heading", { level: 3, name: backpack.name }),
     ).toBeInTheDocument();
@@ -5422,10 +5781,10 @@ describe("the wishlist screen", () => {
 });
 ```
 
-**`tests/screens/signInPage.test.tsx`**
+**`tests/screens/logInPage.test.tsx`**
 
 ```tsx
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({
@@ -5438,70 +5797,67 @@ vi.mock("@/server/account", () => ({
 
 vi.mock("@/server/actions/accountActions", () => ({
   signIn: vi.fn(),
-  register: vi.fn(),
 }));
 
-import SignInPage from "@/app/sign-in/page";
+import LogInPage from "@/app/login/page";
 
 import { signedInCustomer } from "../support/seedFixtures";
 
-function renderSignInPage(
+function renderLogInPage(
   parameters: Record<string, string | string[] | undefined>,
 ) {
-  return SignInPage({
+  return LogInPage({
     params: Promise.resolve({}),
     searchParams: Promise.resolve(parameters),
   });
 }
 
-describe("the sign in screen", () => {
+describe("the log in screen", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("offers both an existing account and a new one", async () => {
+  it("asks for the address, the password and the device", async () => {
     mocked.readSignedInCustomer.mockResolvedValue({ me: null, wishlist: [] });
 
-    render(await renderSignInPage({}));
+    render(await renderLogInPage({}));
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Sign in" }),
+      screen.getByRole("heading", { level: 1, name: "Log in" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: "Email address" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Password")).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: "Device description" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Log in" })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
 
-    const existingAccount = within(
-      screen.getByRole("region", { name: "With an account" }),
+  it("says the session ended when a dead session sent the visitor here", async () => {
+    mocked.readSignedInCustomer.mockResolvedValue({ me: null, wishlist: [] });
+
+    render(await renderLogInPage({ sessionEnded: "true" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Your session has ended. Please log in again.",
     );
-    expect(
-      existingAccount.getByRole("textbox", { name: "Email address" }),
-    ).toBeInTheDocument();
-    expect(
-      existingAccount.getByRole("textbox", { name: "Device description" }),
-    ).toBeInTheDocument();
-    expect(
-      existingAccount.getByRole("button", { name: "Sign in" }),
-    ).toBeInTheDocument();
-
-    const newAccount = within(screen.getByRole("region", { name: "New here" }));
-    expect(newAccount.getByRole("textbox", { name: "Name" })).toBeInTheDocument();
-    expect(
-      newAccount.getByRole("button", { name: "Create account" }),
-    ).toBeInTheDocument();
   });
 
   it("carries the screen the visitor came from into the form", async () => {
     mocked.readSignedInCustomer.mockResolvedValue({ me: null, wishlist: [] });
 
-    render(await renderSignInPage({ next: "/checkout" }));
+    render(await renderLogInPage({ next: "/checkout" }));
 
-    const existingAccount = screen.getByRole("region", {
-      name: "With an account",
-    });
-    expect(
-      existingAccount.querySelector('input[name="destination"]'),
-    ).toHaveValue("/checkout");
+    const form = screen.getByRole("button", { name: "Log in" }).closest("form");
+    expect(form?.querySelector('input[name="destination"]')).toHaveValue(
+      "/checkout",
+    );
   });
 
-  it("sends a visitor who is already signed in to the account screen", async () => {
+  it("sends a visitor who is already logged in to the account screen", async () => {
     mocked.readSignedInCustomer.mockResolvedValue({
       me: {
         id: signedInCustomer.id,
@@ -5511,7 +5867,7 @@ describe("the sign in screen", () => {
       wishlist: [],
     });
 
-    render(await renderSignInPage({}));
+    render(await renderLogInPage({}));
 
     expect(
       screen.getByRole("link", { name: "Go to your account" }),
@@ -5520,7 +5876,78 @@ describe("the sign in screen", () => {
 });
 ```
 
-## The tests
+**`tests/screens/registerPage.test.tsx`**
+
+```tsx
+import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const mocked = vi.hoisted(() => ({
+  readSignedInCustomer: vi.fn(),
+}));
+
+vi.mock("@/server/account", () => ({
+  readSignedInCustomer: mocked.readSignedInCustomer,
+}));
+
+vi.mock("@/server/actions/accountActions", () => ({
+  register: vi.fn(),
+}));
+
+import RegisterPage from "@/app/register/page";
+
+import { signedInCustomer } from "../support/seedFixtures";
+
+function renderRegisterPage(
+  parameters: Record<string, string | string[] | undefined>,
+) {
+  return RegisterPage({
+    params: Promise.resolve({}),
+    searchParams: Promise.resolve(parameters),
+  });
+}
+
+describe("the register screen", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("asks for a name, an address and a password", async () => {
+    mocked.readSignedInCustomer.mockResolvedValue({ me: null, wishlist: [] });
+
+    render(await renderRegisterPage({}));
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Register" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Name" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: "Email address" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Password")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Register" })).toBeInTheDocument();
+  });
+
+  it("points a customer who already has an account at their account", async () => {
+    mocked.readSignedInCustomer.mockResolvedValue({
+      me: {
+        id: signedInCustomer.id,
+        name: signedInCustomer.name,
+        email: signedInCustomer.email,
+      },
+      wishlist: [],
+    });
+
+    render(await renderRegisterPage({}));
+
+    expect(
+      screen.getByRole("link", { name: "Go to your account" }),
+    ).toHaveAttribute("href", "/account");
+  });
+});
+```
+
+## The unit tests
 
 ```
 npm test
@@ -5531,30 +5958,32 @@ Vitest with Testing Library, jsdom as the environment. A passing run prints:
 ```
  RUN  v5.0.0 C:/Src/zappy-mart/frontends/nextjs
 
- Test Files  15 passed (15)
-      Tests  61 passed (61)
+ Test Files  17 passed (17)
+      Tests  70 passed (70)
 ```
 
 `npm run test:watch` keeps it running while you edit.
 
 What the suite covers, and how:
 
-- **One test file per screen**, eight of them in `tests/screens/`. Each one
+- **One test file per screen**, ten of them in `tests/screens/`. Each one
   renders the screen's server component and queries it by role: a heading, a
-  link, a button, a search form, a table with its caption. No test reaches for
-  an identifier that a production component would otherwise not need, and no
+  link, a button, a search form, a table row header. No test reaches for an
+  identifier that a production component would otherwise not need, and no
   production component carries a test hook. The reads a screen makes are the
   mocked boundary, so a screen test says what the screen renders and nothing
   about how the API answers.
-- **One test per server action**, four files in `tests/actions/`. Each mocks
-  the client, so an action test says three things: which variables went to the
-  API, what the action makes of a refusal, and whether the screens were
-  invalidated. The `next/navigation` redirect is mocked as well, so the test can
-  say where a placed order sends the visitor.
-- **The two pieces that carry the security model** have their own tests in
+- **One test per server action**, four files in `tests/actions/`. Each mocks the
+  client, so an action test says three things: which variables went to the API,
+  what the action makes of a refusal, and whether the screens were invalidated.
+  The `next/navigation` redirect is mocked as well, so the test can say where a
+  placed order sends the visitor.
+- **The three pieces that carry a promise** have their own tests in
   `tests/units/`: the encrypted session cookie round trips, hides the tokens in
-  its value and reads a tampered value as no session, and the API cookie header
-  is built and read the way `docs/security.md` describes.
+  its value and reads a tampered value as no session, the API cookie header is
+  built and read the way `docs/security.md` describes, and the route announcer
+  installs one polite live region and leaves an alert on the screen as the only
+  alert.
 
 ## Linting
 
@@ -5570,31 +5999,73 @@ ESLint 10.10.0 of `docs/versions.md`.
 
 ## The shared end to end suite
 
-`tools/end-to-end/` holds the Playwright suite that runs against all three
-frontends, and it belongs to the React Router project. This project does not
-create it and does not copy it. To point it here:
+[tools/end-to-end](../../tools/end-to-end) holds the Playwright suite that drives
+every Zappy Mart store front through a browser, by role and by visible text. It
+is the contract this store front answers to, and it passes here.
+
+Three terminals. The API first, on a port of its own so it never collides with
+another run:
+
+```
+cd tools/mock-server
+ZAPPY_MOCK_PORT=4001 node server.mjs
+```
+
+Then the store front, built and started against that API:
 
 ```
 cd frontends/nextjs
-npm run dev
+ZAPPY_GRAPHQL_URL=http://localhost:4001/graphql \
+  ZAPPY_STOREFRONT_ORIGIN=http://localhost:3001 \
+  ZAPPY_SESSION_SECRET=a-long-random-string npm run build
+ZAPPY_GRAPHQL_URL=http://localhost:4001/graphql \
+  ZAPPY_STOREFRONT_ORIGIN=http://localhost:3001 \
+  ZAPPY_SESSION_SECRET=a-long-random-string npm run start
 ```
 
-and in another terminal, with the mock server or a backend running:
+Then the suite:
 
 ```
 cd tools/end-to-end
-FRONTEND_URL=http://localhost:3001 npx playwright test
+FRONTEND_URL=http://localhost:3001 GRAPHQL_URL=http://localhost:4001/graphql \
+  RESET_SEED=true npx playwright test
 ```
 
-The store front needs nothing else to be driven by it: every screen is a plain
-URL, every form posts to a server action, and no screen needs JavaScript to
-render.
+The run of 9 September 2026 against the built store front:
+
+```
+Seed reloaded at http://localhost:4001/graphql with 20 products.
+
+Running 4 tests using 1 worker
+
+  ok 1 [chromium] › tests\catalogueToPlacedOrder.spec.ts:13:1 › a visitor filters the catalogue, fills a cart, uses a promotion code and places an order (2.2s)
+  ok 2 [chromium] › tests\sessionsAndReplay.spec.ts:24:1 › a customer registers, logs in twice, revokes the other session and cannot replay a dead one (2.8s)
+  ok 3 [chromium] › tests\storeFrontIsUp.spec.ts:4:1 › the catalogue answers with products, a filter and the shop chrome (416ms)
+  ok 4 [chromium] › tests\withoutJavaScript.spec.ts:6:1 › the catalogue filter and the cart forms work without JavaScript @progressive-enhancement (1.3s)
+
+  4 passed (9.0s)
+```
+
+What those four prove about this store front, in the words of the store rather
+than the framework:
+
+1. A visitor can filter the catalogue by name and by category, open a product,
+   put two of it in the cart, log in at the checkout gate, apply `WELCOME10` and
+   place the order, and the totals come out at the 2268 cents that
+   `contract/seed/seed.md` works through by hand.
+2. A customer can register, log out, log in twice, see both sessions, revoke the
+   other one, and the revoked browser is refused at once. Presenting the old
+   cookie again is refused too, because the session behind the token is closed.
+3. The catalogue answers with products, a filter and the shop chrome.
+4. All of that, minus the account journey, works with JavaScript switched off.
 
 ## Continuous integration
 
 `.github/workflows/nextjs.yml` at the root of the repository runs the lint, the
-tests and the build on every push and every pull request that touches
-`frontends/nextjs/**` or `contract/**`.
+unit tests and the build on every push and every pull request that touches
+`frontends/nextjs/**` or `contract/**`. The end to end suite is not in it,
+because it needs a running API and a running store front, and
+`tools/end-to-end` decides how that is wired.
 
 ```yaml
 name: Next.js frontend
@@ -5647,7 +6118,7 @@ read from the npm registry on 9 September 2026.
 | `vitest` | 5.0.0 | `docs/versions.md`, verified 8 September 2026 |
 | `@testing-library/react` | 16.3.3 | `docs/versions.md`, verified 8 September 2026 |
 | `eslint` | 10.10.0 | `docs/versions.md`, verified 8 September 2026 |
-| `typescript` | 6.0.3 | `docs/versions.md` pins the 6.0 line and asks the project to record its patch. 6.0.3 is the newest 6.0.x on npm, and the same patch `frontends/angular` runs |
+| `typescript` | 6.0.3 | `docs/versions.md` pins the 6.0 line and asks the project to record its patch. 6.0.3 is the newest 6.0.x on npm, and the same patch `frontends/angular` and `tools/end-to-end` run |
 
 Read from npm on 9 September 2026, for this project:
 
@@ -5670,9 +6141,6 @@ Read from npm on 9 September 2026, for this project:
 
 ## What is not here yet
 
-- **The end to end suite has not run against this store front.** It does not
-  exist yet, and `tools/end-to-end/` belongs to the React Router project. The
-  section above says how to point it here the day it lands.
 - **No pagination on the screens.** The contract pages the catalogue and the
   order history with `first` and `after`, and this store front asks for the
   first 24 products and the first 10 orders and renders those. The seed holds
@@ -5682,6 +6150,6 @@ Read from npm on 9 September 2026, for this project:
 - **No optimistic rendering.** A cart change waits for the API answer. That is
   the honest shape for a store front whose totals are computed by the API, and
   it keeps the promise that there is no client store for server data.
-- **The catalogue filter is a plain form.** It navigates with the browser rather
-  than with the router, so it works with no JavaScript at all. The cost is a
-  full navigation on every filter change.
+- **No streaming**, for the reason under "Streaming, and why there is none".
+- **The catalogue filter navigates the whole page.** That is what makes it work
+  without JavaScript, and it costs a full navigation on every filter change.
