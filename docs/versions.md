@@ -15,7 +15,7 @@ on a date, never a number from memory.
 | C# | 14, ships with the .NET 10 SDK | 6 September 2026 | learn.microsoft.com |
 | Java | JDK 25, LTS, GA 16 September 2025 | 6 September 2026 | openjdk.org |
 | Spring Boot | 4.1.1 on Spring Framework 7.0.9, Java 17 minimum, Java 26 maximum | 6 September 2026 | spring-projects/spring-boot releases |
-| Spring for GraphQL | 2.0.4 | 7 September 2026 | spring.io/projects/spring-graphql |
+| Spring for GraphQL | 2.0.5, the version the Spring Boot 4.1.1 bill of materials manages and the Java backend resolved | 9 September 2026 | spring-boot-dependencies 4.1.1 pom |
 | Spring specifics | `RestTemplate` deprecated in Spring Framework 7, `ProblemDetail` follows RFC 9457, Hibernate Validator 9.1.3, jakarta.validation 3.1.1, Testcontainers 2.0.5 with `@ServiceConnection` | 6 September 2026 | docs.spring.io |
 | Kotlin | 2.4.10, K2 is the only compiler | 6 September 2026 | kotlinlang.org |
 | Kotlin with Spring | Spring Boot 4.1.1 manages Kotlin 2.3.21, minimum 2.2, `kotlin("plugin.spring")` opens annotated classes, `jackson-module-kotlin` auto registers | 6 September 2026 | docs.spring.io |
@@ -77,6 +77,7 @@ the Spring Boot 4.1.1 dependency bill of materials on 8 September 2026.
 | React Router store front | TypeScript 6.0.3, `@react-router/{dev,node,serve}` 8.3.1, `@tailwindcss/vite` 4.3.3, `@urql/core` 6.0.3 with gql.tada 1.11.3 and its companion `@0no-co/graphqlsp` 1.17.5 (the React bindings `urql` are not used), `@vitejs/plugin-react` 6.1.1, jsdom 30.0.1, the Testing Library packages as in the Next.js row, ESLint 10.10.0 with `@eslint/js` 10.0.1, typescript-eslint 8.70.0, `eslint-plugin-react-hooks` 7.1.1, `@types/node` 24.13.3 (the 24 line, to match the runtime), isbot 5.2.2 | verified 9 September 2026 | npm |
 | End to end suite | `@playwright/test` 1.63.0 in `tools/end-to-end`, parameterised by `FRONTEND_URL`, `RESET_SEED=true` reloads the seed before the run | verified 9 September 2026 | npm |
 | Angular store front | `apollo-angular` 14.2.0 with `@apollo/client` 4.2.12 on `graphql` 17.0.2, `@graphql-typed-document-node/core` 3.2.0, generation with `@graphql-codegen/cli` 7.4.0, `@graphql-codegen/typescript-operations` 6.1.6 and `@graphql-codegen/typed-document-node` 7.1.0 (`@graphql-codegen/typescript` left out because with typescript-operations it emits every enum and input twice) | verified 9 September 2026 | npm |
+| Java backend | Maven Wrapper 3.3.4 with Apache Maven 3.9.16, the Spring Boot 4.1.1 parent, Spring for GraphQL 2.0.5, Spring Security 7.1.1 (`spring-security-crypto` and `spring-security-oauth2-jose`), Hibernate 7.4.5.Final, graphql-java 25.0, Jackson 3.1.5 (the seed loader imports `tools.jackson`), H2 2.4.240 in PostgreSQL mode as the default database, PostgreSQL JDBC 42.7.13, JUnit 6.0.3, AssertJ 3.27.7, `bcprov-jdk18on` 1.85.2 pinned by hand because `Argon2PasswordEncoder` calls Bouncy Castle and the parent does not manage it, Argon2id at 19456 KiB memory, 2 iterations, parallelism 1, a 16 byte salt and a 32 byte hash from the OWASP password storage baseline, Testcontainers left out because it cannot run without Docker, `actions/setup-java@v6` with Temurin 25 in the workflow | verified 9 September 2026 | Maven Central, the Spring Boot bill of materials, the OWASP cheat sheet |
 | Apollo Federation, JavaScript | `@apollo/subgraph` 2.15.0, `@apollo/gateway` 2.14.4, `@apollo/composition` 2.14.4 | the gateway serves the composed supergraph in this repository because Norton on the development laptop blocks the Rust `router.exe` that `@apollo/router` downloads (and `rover.exe` from `@apollo/rover` 0.41.0). The same supergraph file runs under Apollo Router unchanged | npm |
 
 ## Still to verify at the item that first needs it
@@ -84,6 +85,5 @@ the Spring Boot 4.1.1 dependency bill of materials on 8 September 2026.
 | Item | Needed by | Note |
 |---|---|---|
 | Argon2 parameters | Z3 | memory, iterations and parallelism from the OWASP password storage cheat sheet, read on the day |
-| Spring Security Argon2 encoder | Z6 | `Argon2PasswordEncoder` in spring-security-crypto 7.1.1, its recommended factory method checked on the day |
 | .NET runtime patch | Z3 | the table says 10.0.11, EF Core is at 10.0.12, the SDK in use is recorded when the solution is created |
 | TypeScript 6.0 patch | Z5, Z8 | the React Router and Next.js frontends record their 6.0.x at install, the Angular frontend runs 6.0.3 |

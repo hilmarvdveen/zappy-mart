@@ -1,0 +1,76 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: zappy-mart
+  profiles:
+    default: development
+  datasource:
+    url: jdbc:h2:file:./data/zappy-mart;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: zappy
+    password: zappy
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  graphql:
+    schema:
+      locations: classpath:graphql/
+      file-extensions: .graphql,.graphqls
+    graphiql:
+      enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      access: read_only
+      show-details: always
+
+zappy:
+  security:
+    allowed-origins:
+      - http://localhost:5173
+      - http://localhost:3001
+      - http://localhost:4200
+    cookies-are-secure: true
+    attempts-per-window: 20
+    window: PT1M
+
+---
+spring:
+  config:
+    activate:
+      on-profile: development
+  graphql:
+    schema:
+      locations:
+        - classpath:graphql/
+        - classpath:graphql-development/
+
+zappy:
+  security:
+    allowed-origins:
+      - http://localhost:5173
+      - http://localhost:3001
+      - http://localhost:4200
+      - http://localhost:8081
+
+---
+spring:
+  config:
+    activate:
+      on-profile: postgresql
+  datasource:
+    url: jdbc:postgresql://localhost:5432/zappy_mart
+    driver-class-name: org.postgresql.Driver
+    username: zappy
+    password: zappy
+  jpa:
+    hibernate:
+      ddl-auto: update

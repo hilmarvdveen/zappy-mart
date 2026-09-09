@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.1.1</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.zappymart</groupId>
+  <artifactId>zappy-mart</artifactId>
+  <version>1.0.0</version>
+  <packaging>pom</packaging>
+
+  <name>Zappy Mart</name>
+  <description>The Zappy Mart store as a hexagonal monolith in Java on Spring Boot</description>
+
+  <modules>
+    <module>zappy-domain</module>
+    <module>zappy-application</module>
+    <module>zappy-adapters</module>
+    <module>zappy-host</module>
+  </modules>
+
+  <properties>
+    <java.version>25</java.version>
+    <maven.compiler.release>25</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <bouncycastle.version>1.85.2</bouncycastle.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.zappymart</groupId>
+        <artifactId>zappy-domain</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.zappymart</groupId>
+        <artifactId>zappy-application</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.zappymart</groupId>
+        <artifactId>zappy-adapters</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcprov-jdk18on</artifactId>
+        <version>${bouncycastle.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <configuration>
+            <compilerArgs>
+              <arg>-parameters</arg>
+              <arg>-Xlint:all,-serial,-this-escape</arg>
+            </compilerArgs>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>
