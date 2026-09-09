@@ -11,15 +11,14 @@ import {
 
 const password = "correct horse battery staple";
 
-async function storeFrontCookie(context: BrowserContext): Promise<Cookie> {
+async function cookiesOfTheSignedInBrowser(context: BrowserContext): Promise<Cookie[]> {
   const cookies = await context.cookies();
-  const found = cookies.find((cookie) => cookie.name === "zappy_store_front");
-  if (found === undefined) {
+  if (cookies.length === 0) {
     throw new Error(
-      "The store front did not set its session cookie, so there is nothing to replay.",
+      "The store front set no cookie while signed in, so there is nothing to replay.",
     );
   }
-  return found;
+  return cookies;
 }
 
 test("a customer registers, logs in twice, revokes the other session and cannot replay a dead one", async ({
@@ -63,9 +62,9 @@ test("a customer registers, logs in twice, revokes the other session and cannot 
   await secondPage.goto("/account");
   await expectSessionEndedNotice(secondPage);
 
-  const liveCookie = await storeFrontCookie(firstContext);
+  const cookiesBeforeLogout = await cookiesOfTheSignedInBrowser(firstContext);
   await logOut(firstPage);
-  await firstContext.addCookies([liveCookie]);
+  await firstContext.addCookies(cookiesBeforeLogout);
   await firstPage.goto("/account");
   await expectSessionEndedNotice(firstPage);
 
