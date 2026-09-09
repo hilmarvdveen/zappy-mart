@@ -1,0 +1,415 @@
+schema
+  @link(url: "https://specs.apollo.dev/link/v1.0")
+  @link(url: "https://specs.apollo.dev/join/v0.5", for: EXECUTION)
+  @link(url: "https://specs.apollo.dev/inaccessible/v0.2", for: SECURITY)
+{
+  query: Query
+  mutation: Mutation
+}
+
+directive @inaccessible on FIELD_DEFINITION | OBJECT | INTERFACE | UNION | ARGUMENT_DEFINITION | SCALAR | ENUM | ENUM_VALUE | INPUT_OBJECT | INPUT_FIELD_DEFINITION
+
+directive @join__directive(graphs: [join__Graph!], name: String!, args: join__DirectiveArguments) repeatable on SCHEMA | OBJECT | INTERFACE | FIELD_DEFINITION
+
+directive @join__enumValue(graph: join__Graph!) repeatable on ENUM_VALUE
+
+directive @join__field(graph: join__Graph, requires: join__FieldSet, provides: join__FieldSet, type: String, external: Boolean, override: String, usedOverridden: Boolean, overrideLabel: String, contextArguments: [join__ContextArgument!]) repeatable on FIELD_DEFINITION | INPUT_FIELD_DEFINITION
+
+directive @join__graph(name: String!, url: String!) on ENUM_VALUE
+
+directive @join__implements(graph: join__Graph!, interface: String!) repeatable on OBJECT | INTERFACE
+
+directive @join__type(graph: join__Graph!, key: join__FieldSet, extension: Boolean! = false, resolvable: Boolean! = true, isInterfaceObject: Boolean! = false) repeatable on OBJECT | INTERFACE | UNION | ENUM | INPUT_OBJECT | SCALAR
+
+directive @join__unionMember(graph: join__Graph!, member: String!) repeatable on UNION
+
+directive @link(url: String, as: String, for: link__Purpose, import: [link__Import]) repeatable on SCHEMA
+
+type AppliedPromotion
+  @join__type(graph: PROMOTIONS)
+{
+  code: String!
+  kind: PromotionKind!
+  discount: Money!
+}
+
+type AuthenticationPayload
+  @join__type(graph: ACCOUNTS)
+{
+  customer: Customer
+  accessToken: String
+  accessTokenExpiresAt: DateTime
+  errors: [UserError!]!
+}
+
+type Cart
+  @join__type(graph: CART, key: "id")
+  @join__type(graph: PROMOTIONS, key: "id")
+{
+  id: ID!
+  lines: [CartLine!]! @join__field(graph: CART)
+  subtotal: Money! @join__field(graph: CART) @join__field(graph: PROMOTIONS, external: true)
+  updatedAt: DateTime! @join__field(graph: CART)
+  promotion: AppliedPromotion @join__field(graph: PROMOTIONS, requires: "subtotal { amount currency }")
+  shipping: Money! @join__field(graph: PROMOTIONS, requires: "subtotal { amount currency }")
+  total: Money! @join__field(graph: PROMOTIONS, requires: "subtotal { amount currency }")
+}
+
+type CartLine
+  @join__type(graph: CART)
+{
+  id: ID!
+  product: Product!
+  quantity: Int!
+  lineTotal: Money!
+}
+
+type CartPayload
+  @join__type(graph: CART)
+  @join__type(graph: PROMOTIONS)
+{
+  cart: Cart
+  availableStock: Int
+  errors: [UserError!]!
+}
+
+type Category
+  @join__type(graph: CATALOGUE)
+{
+  id: ID!
+  name: String!
+  slug: String!
+}
+
+type Customer
+  @join__type(graph: ACCOUNTS, key: "id")
+{
+  id: ID!
+  email: String!
+  name: String!
+  createdAt: DateTime!
+  sessions: [Session!]!
+  wishlist: [Product!]!
+}
+
+scalar DateTime
+  @join__type(graph: ACCOUNTS)
+  @join__type(graph: CART)
+  @join__type(graph: ORDERING)
+
+input join__ContextArgument {
+  name: String!
+  type: String!
+  context: String!
+  selection: join__FieldValue!
+}
+
+scalar join__DirectiveArguments
+
+scalar join__FieldSet
+
+scalar join__FieldValue
+
+enum join__Graph {
+  ACCOUNTS @join__graph(name: "accounts", url: "http://localhost:4105/graphql")
+  CART @join__graph(name: "cart", url: "http://localhost:4102/graphql")
+  CATALOGUE @join__graph(name: "catalogue", url: "http://localhost:4101/graphql")
+  ORDERING @join__graph(name: "ordering", url: "http://localhost:4104/graphql")
+  PROMOTIONS @join__graph(name: "promotions", url: "http://localhost:4103/graphql")
+}
+
+scalar link__Import
+
+enum link__Purpose {
+  """
+  `SECURITY` features provide metadata necessary to securely resolve fields.
+  """
+  SECURITY
+
+  """
+  `EXECUTION` features provide metadata necessary for operation execution.
+  """
+  EXECUTION
+}
+
+input LoginInput
+  @join__type(graph: ACCOUNTS)
+{
+  email: String!
+  password: String!
+  device: String
+}
+
+type LogoutPayload
+  @join__type(graph: ACCOUNTS)
+{
+  success: Boolean!
+  errors: [UserError!]!
+}
+
+type Money
+  @join__type(graph: CART)
+  @join__type(graph: CATALOGUE)
+  @join__type(graph: ORDERING)
+  @join__type(graph: PROMOTIONS)
+{
+  amount: Int!
+  currency: String!
+}
+
+type Mutation
+  @join__type(graph: ACCOUNTS)
+  @join__type(graph: CART)
+  @join__type(graph: CATALOGUE)
+  @join__type(graph: ORDERING)
+  @join__type(graph: PROMOTIONS)
+{
+  register(input: RegisterInput!): AuthenticationPayload! @join__field(graph: ACCOUNTS)
+  login(input: LoginInput!): AuthenticationPayload! @join__field(graph: ACCOUNTS)
+  refreshSession: AuthenticationPayload! @join__field(graph: ACCOUNTS)
+  logout: LogoutPayload! @join__field(graph: ACCOUNTS)
+  revokeSession(sessionId: ID!): RevokeSessionPayload! @join__field(graph: ACCOUNTS)
+  addToWishlist(productId: ID!): WishlistPayload! @join__field(graph: ACCOUNTS)
+  removeFromWishlist(productId: ID!): WishlistPayload! @join__field(graph: ACCOUNTS)
+  resetSubgraphSeed: ResetSeedPayload! @inaccessible
+  addToCart(productId: ID!, quantity: Int = 1): CartPayload! @join__field(graph: CART)
+  changeCartLineQuantity(lineId: ID!, quantity: Int!): CartPayload! @join__field(graph: CART)
+  removeCartLine(lineId: ID!): CartPayload! @join__field(graph: CART)
+  emptyCart(cartId: ID!): Boolean! @inaccessible @join__field(graph: CART)
+  mergeAnonymousCart(visitorKey: String!, customerId: ID!): Boolean! @inaccessible @join__field(graph: CART)
+  reserveStock(idempotencyKey: String!, lines: [StockLine!]!): StockReservation! @inaccessible @join__field(graph: CATALOGUE)
+  releaseStock(idempotencyKey: String!): Boolean! @inaccessible @join__field(graph: CATALOGUE)
+  resetSeed: ResetSeedPayload! @join__field(graph: CATALOGUE)
+  placeOrder(idempotencyKey: String): OrderPayload! @join__field(graph: ORDERING)
+  applyPromotionCode(code: String!): CartPayload! @join__field(graph: PROMOTIONS)
+  removePromotionCode: CartPayload! @join__field(graph: PROMOTIONS)
+  clearCartPromotion(cartId: ID!): Boolean! @inaccessible @join__field(graph: PROMOTIONS)
+  countPromotionUse(code: String!, orderId: ID!): Boolean! @inaccessible @join__field(graph: PROMOTIONS)
+}
+
+type Order
+  @join__type(graph: ORDERING, key: "id")
+{
+  id: ID!
+  number: String!
+  status: OrderStatus!
+  lines: [OrderLine!]!
+  promotionCode: String
+  subtotal: Money!
+  discount: Money!
+  shipping: Money!
+  total: Money!
+  placedAt: DateTime!
+}
+
+type OrderConnection
+  @join__type(graph: ORDERING)
+{
+  edges: [OrderEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type OrderEdge
+  @join__type(graph: ORDERING)
+{
+  cursor: String!
+  node: Order!
+}
+
+type OrderLine
+  @join__type(graph: ORDERING)
+{
+  productName: String!
+  unitPrice: Money!
+  quantity: Int!
+  lineTotal: Money!
+}
+
+type OrderPayload
+  @join__type(graph: ORDERING)
+{
+  order: Order
+  errors: [UserError!]!
+}
+
+enum OrderStatus
+  @join__type(graph: ORDERING)
+{
+  PLACED @join__enumValue(graph: ORDERING)
+  PAID @join__enumValue(graph: ORDERING)
+  CANCELLED @join__enumValue(graph: ORDERING)
+}
+
+type PageInfo
+  @join__type(graph: CATALOGUE)
+  @join__type(graph: ORDERING)
+{
+  hasNextPage: Boolean!
+  endCursor: String
+}
+
+type Product
+  @join__type(graph: ACCOUNTS, key: "id", resolvable: false)
+  @join__type(graph: CART, key: "id", resolvable: false)
+  @join__type(graph: CATALOGUE, key: "id")
+{
+  id: ID!
+  name: String! @join__field(graph: CATALOGUE)
+  slug: String! @join__field(graph: CATALOGUE)
+  description: String! @join__field(graph: CATALOGUE)
+  price: Money! @join__field(graph: CATALOGUE)
+  category: Category! @join__field(graph: CATALOGUE)
+  stock: Int! @join__field(graph: CATALOGUE)
+  imageUrl: String @join__field(graph: CATALOGUE)
+}
+
+type ProductConnection
+  @join__type(graph: CATALOGUE)
+{
+  edges: [ProductEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type ProductEdge
+  @join__type(graph: CATALOGUE)
+{
+  cursor: String!
+  node: Product!
+}
+
+input ProductFilter
+  @join__type(graph: CATALOGUE)
+{
+  categorySlug: String
+  nameContains: String
+  inStockOnly: Boolean
+}
+
+enum PromotionKind
+  @join__type(graph: PROMOTIONS)
+{
+  PERCENTAGE @join__enumValue(graph: PROMOTIONS)
+  FIXED_AMOUNT @join__enumValue(graph: PROMOTIONS)
+  FREE_SHIPPING @join__enumValue(graph: PROMOTIONS)
+}
+
+type Query
+  @join__type(graph: ACCOUNTS)
+  @join__type(graph: CART)
+  @join__type(graph: CATALOGUE)
+  @join__type(graph: ORDERING)
+  @join__type(graph: PROMOTIONS)
+{
+  wishlist: [Product!]! @join__field(graph: ACCOUNTS)
+  me: Customer @join__field(graph: ACCOUNTS)
+  isSessionLive(sessionId: ID!): Boolean! @inaccessible @join__field(graph: ACCOUNTS)
+  cart: Cart! @join__field(graph: CART)
+  products(filter: ProductFilter, first: Int = 24, after: String): ProductConnection! @join__field(graph: CATALOGUE)
+  product(slug: String!): Product @join__field(graph: CATALOGUE)
+  categories: [Category!]! @join__field(graph: CATALOGUE)
+  orders(first: Int = 10, after: String): OrderConnection! @join__field(graph: ORDERING)
+  order(id: ID!): Order @join__field(graph: ORDERING)
+}
+
+input RegisterInput
+  @join__type(graph: ACCOUNTS)
+{
+  email: String!
+  name: String!
+  password: String!
+}
+
+type ResetSeedPayload
+  @join__type(graph: ACCOUNTS)
+  @join__type(graph: CART)
+  @join__type(graph: CATALOGUE)
+  @join__type(graph: ORDERING)
+  @join__type(graph: PROMOTIONS)
+{
+  success: Boolean!
+  loadedProducts: Int!
+  errors: [UserError!]!
+}
+
+type RevokeSessionPayload
+  @join__type(graph: ACCOUNTS)
+{
+  sessions: [Session!]!
+  errors: [UserError!]!
+}
+
+type Session
+  @join__type(graph: ACCOUNTS)
+{
+  id: ID!
+  device: String!
+  createdAt: DateTime!
+  lastUsedAt: DateTime!
+  current: Boolean!
+}
+
+input StockLine
+  @join__type(graph: CATALOGUE)
+  @inaccessible
+{
+  productId: ID!
+  quantity: Int!
+}
+
+type StockReservation
+  @join__type(graph: CATALOGUE)
+  @inaccessible
+{
+  reserved: Boolean!
+  unavailableProductId: ID
+  availableStock: Int
+}
+
+type UserError
+  @join__type(graph: ACCOUNTS)
+  @join__type(graph: CART)
+  @join__type(graph: CATALOGUE)
+  @join__type(graph: ORDERING)
+  @join__type(graph: PROMOTIONS)
+{
+  code: UserErrorCode!
+  message: String!
+  field: String
+}
+
+enum UserErrorCode
+  @join__type(graph: ACCOUNTS)
+  @join__type(graph: CART)
+  @join__type(graph: CATALOGUE)
+  @join__type(graph: ORDERING)
+  @join__type(graph: PROMOTIONS)
+{
+  PRODUCT_NOT_FOUND @join__enumValue(graph: ACCOUNTS) @join__enumValue(graph: CART) @join__enumValue(graph: CATALOGUE) @join__enumValue(graph: ORDERING) @join__enumValue(graph: PROMOTIONS)
+  OUT_OF_STOCK @join__enumValue(graph: ACCOUNTS) @join__enumValue(graph: CART) @join__enumValue(graph: CATALOGUE) @join__enumValue(graph: ORDERING) @join__enumValue(graph: PROMOTIONS)
+  QUANTITY_INVALID @join__enumValue(graph: ACCOUNTS) @join__enumValue(graph: CART) @join__enumValue(graph: CATALOGUE) @join__enumValue(graph: ORDERING) @join__enumValue(graph: PROMOTIONS)
+  CART_LINE_NOT_FOUND @join__enumValue(graph: ACCOUNTS) @join__enumValue(graph: CART) @join__enumValue(graph: CATALOGUE) @join__enumValue(graph: ORDERING) @join__enumValue(graph: PROMOTIONS)
+  CART_EMPTY @join__enumValue(graph: ACCOUNTS) @join__enumValue(graph: CART) @join__enumValue(graph: CATALOGUE) @join__enumValue(graph: ORDERING) @join__enumValue(graph: PROMOTIONS)
+  CODE_UNKNOWN @join__enumValue(graph: ACCOUNTS) @join__enumValue(graph: CART) @join__enumValue(graph: CATALOGUE) @join__enumValue(graph: ORDERING) @join__enumValue(graph: PROMOTIONS)
+  CODE_EXPIRED @join__enumValue(graph: ACCOUNTS) @join__enumValue(graph: CART) @join__enumValue(graph: CATALOGUE) @join__enumValue(graph: ORDERING) @join__enumValue(graph: PROMOTIONS)
+  CODE_EXHAUSTED @join__enumValue(graph: ACCOUNTS) @join__enumValue(graph: CART) @join__enumValue(graph: CATALOGUE) @join__enumValue(graph: ORDERING) @join__enumValue(graph: PROMOTIONS)
+  CODE_MINIMUM_NOT_MET @join__enumValue(graph: ACCOUNTS) @join__enumValue(graph: CART) @join__enumValue(graph: CATALOGUE) @join__enumValue(graph: ORDERING) @join__enumValue(graph: PROMOTIONS)
+  EMAIL_TAKEN @join__enumValue(graph: ACCOUNTS) @join__enumValue(graph: CART) @join__enumValue(graph: CATALOGUE) @join__enumValue(graph: ORDERING) @join__enumValue(graph: PROMOTIONS)
+  EMAIL_INVALID @join__enumValue(graph: ACCOUNTS) @join__enumValue(graph: CART) @join__enumValue(graph: CATALOGUE) @join__enumValue(graph: ORDERING) @join__enumValue(graph: PROMOTIONS)
+  PASSWORD_TOO_SHORT @join__enumValue(graph: ACCOUNTS) @join__enumValue(graph: CART) @join__enumValue(graph: CATALOGUE) @join__enumValue(graph: ORDERING) @join__enumValue(graph: PROMOTIONS)
+  PASSWORD_TOO_LONG @join__enumValue(graph: ACCOUNTS) @join__enumValue(graph: CART) @join__enumValue(graph: CATALOGUE) @join__enumValue(graph: ORDERING) @join__enumValue(graph: PROMOTIONS)
+  CREDENTIALS_INVALID @join__enumValue(graph: ACCOUNTS) @join__enumValue(graph: CART) @join__enumValue(graph: CATALOGUE) @join__enumValue(graph: ORDERING) @join__enumValue(graph: PROMOTIONS)
+  RATE_LIMITED @join__enumValue(graph: ACCOUNTS) @join__enumValue(graph: CART) @join__enumValue(graph: CATALOGUE) @join__enumValue(graph: ORDERING) @join__enumValue(graph: PROMOTIONS)
+  SESSION_INVALID @join__enumValue(graph: ACCOUNTS) @join__enumValue(graph: CART) @join__enumValue(graph: CATALOGUE) @join__enumValue(graph: ORDERING) @join__enumValue(graph: PROMOTIONS)
+  SESSION_NOT_FOUND @join__enumValue(graph: ACCOUNTS) @join__enumValue(graph: CART) @join__enumValue(graph: CATALOGUE) @join__enumValue(graph: ORDERING) @join__enumValue(graph: PROMOTIONS)
+  NOT_AUTHENTICATED @join__enumValue(graph: ACCOUNTS) @join__enumValue(graph: CART) @join__enumValue(graph: CATALOGUE) @join__enumValue(graph: ORDERING) @join__enumValue(graph: PROMOTIONS)
+  ORDER_NOT_FOUND @join__enumValue(graph: ACCOUNTS) @join__enumValue(graph: CART) @join__enumValue(graph: CATALOGUE) @join__enumValue(graph: ORDERING) @join__enumValue(graph: PROMOTIONS)
+}
+
+type WishlistPayload
+  @join__type(graph: ACCOUNTS)
+{
+  products: [Product!]!
+  errors: [UserError!]!
+}

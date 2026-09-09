@@ -1,0 +1,63 @@
+supergraph:
+  listen: 127.0.0.1:4100
+  path: /graphql
+  introspection: true
+
+health_check:
+  enabled: true
+  listen: 127.0.0.1:4100
+  path: /health
+
+cors:
+  allow_credentials: true
+  origins:
+    - http://localhost:5173
+    - http://localhost:3001
+    - http://localhost:4200
+  allow_headers:
+    - content-type
+    - authorization
+  expose_headers:
+    - set-cookie
+
+headers:
+  all:
+    request:
+      - propagate:
+          named: authorization
+      - propagate:
+          named: cookie
+      - propagate:
+          named: origin
+
+traffic_shaping:
+  all:
+    timeout: 5s
+  subgraphs:
+    catalogue:
+      timeout: 5s
+    cart:
+      timeout: 5s
+    promotions:
+      timeout: 5s
+    ordering:
+      timeout: 10s
+    accounts:
+      timeout: 5s
+
+limits:
+  max_depth: 12
+  max_height: 200
+  max_aliases: 30
+  max_root_fields: 20
+  parser_max_tokens: 15000
+  parser_max_recursion: 500
+  http_max_request_bytes: 524288
+
+include_subgraph_errors:
+  all: true
+
+telemetry:
+  instrumentation:
+    spans:
+      mode: spec_compliant

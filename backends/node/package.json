@@ -1,0 +1,40 @@
+{
+  "name": "zappy-mart-node",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Zappy Mart as a federated graph: five Apollo subgraphs behind one Apollo gateway",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.20.0"
+  },
+  "workspaces": [
+    "shared",
+    "subgraphs/catalogue",
+    "subgraphs/cart",
+    "subgraphs/promotions",
+    "subgraphs/ordering",
+    "subgraphs/accounts",
+    "router"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "tsc --build --clean",
+    "generate": "node tools/generate-resolver-types.mjs",
+    "compose": "node tools/compose.mjs",
+    "contract-diff": "node tools/contract-diff.mjs",
+    "start": "node tools/start-graph.mjs",
+    "test": "node tools/run-tests.mjs"
+  },
+  "devDependencies": {
+    "@apollo/composition": "2.14.4",
+    "@apollo/federation-internals": "2.14.4",
+    "@graphql-codegen/add": "7.1.0",
+    "@graphql-codegen/cli": "7.4.0",
+    "@graphql-codegen/typescript": "6.1.0",
+    "@graphql-codegen/typescript-resolvers": "6.1.0",
+    "@types/node": "26.5.0",
+    "graphql": "16.14.2",
+    "typescript": "6.0.3"
+  }
+}

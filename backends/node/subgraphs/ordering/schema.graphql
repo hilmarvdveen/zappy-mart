@@ -1,0 +1,93 @@
+extend schema
+  @link(url: "https://specs.apollo.dev/federation/v2.9", import: ["@key", "@shareable", "@inaccessible"])
+
+scalar DateTime
+
+type Money @shareable {
+  amount: Int!
+  currency: String!
+}
+
+enum OrderStatus {
+  PLACED
+  PAID
+  CANCELLED
+}
+
+type OrderLine {
+  productName: String!
+  unitPrice: Money!
+  quantity: Int!
+  lineTotal: Money!
+}
+
+type Order @key(fields: "id") {
+  id: ID!
+  number: String!
+  status: OrderStatus!
+  lines: [OrderLine!]!
+  promotionCode: String
+  subtotal: Money!
+  discount: Money!
+  shipping: Money!
+  total: Money!
+  placedAt: DateTime!
+}
+
+type OrderEdge {
+  cursor: String!
+  node: Order!
+}
+
+type PageInfo @shareable {
+  hasNextPage: Boolean!
+  endCursor: String
+}
+
+type OrderConnection {
+  edges: [OrderEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+enum UserErrorCode {
+  PRODUCT_NOT_FOUND
+  OUT_OF_STOCK
+  QUANTITY_INVALID
+  CART_LINE_NOT_FOUND
+  CART_EMPTY
+  CODE_UNKNOWN
+  CODE_EXPIRED
+  CODE_EXHAUSTED
+  CODE_MINIMUM_NOT_MET
+  EMAIL_TAKEN
+  EMAIL_INVALID
+  PASSWORD_TOO_SHORT
+  PASSWORD_TOO_LONG
+  CREDENTIALS_INVALID
+  RATE_LIMITED
+  SESSION_INVALID
+  SESSION_NOT_FOUND
+  NOT_AUTHENTICATED
+  ORDER_NOT_FOUND
+}
+
+type UserError @shareable {
+  code: UserErrorCode!
+  message: String!
+  field: String
+}
+
+type OrderPayload {
+  order: Order
+  errors: [UserError!]!
+}
+
+type Query {
+  orders(first: Int = 10, after: String): OrderConnection!
+  order(id: ID!): Order
+}
+
+type Mutation {
+  placeOrder(idempotencyKey: String): OrderPayload!
+}

@@ -1,0 +1,103 @@
+extend schema
+  @link(url: "https://specs.apollo.dev/federation/v2.9", import: ["@key", "@shareable", "@inaccessible"])
+
+scalar DateTime
+
+type Product @key(fields: "id", resolvable: false) {
+  id: ID!
+}
+
+type Session {
+  id: ID!
+  device: String!
+  createdAt: DateTime!
+  lastUsedAt: DateTime!
+  current: Boolean!
+}
+
+type Customer @key(fields: "id") {
+  id: ID!
+  email: String!
+  name: String!
+  createdAt: DateTime!
+  sessions: [Session!]!
+  wishlist: [Product!]!
+}
+
+enum UserErrorCode {
+  PRODUCT_NOT_FOUND
+  OUT_OF_STOCK
+  QUANTITY_INVALID
+  CART_LINE_NOT_FOUND
+  CART_EMPTY
+  CODE_UNKNOWN
+  CODE_EXPIRED
+  CODE_EXHAUSTED
+  CODE_MINIMUM_NOT_MET
+  EMAIL_TAKEN
+  EMAIL_INVALID
+  PASSWORD_TOO_SHORT
+  PASSWORD_TOO_LONG
+  CREDENTIALS_INVALID
+  RATE_LIMITED
+  SESSION_INVALID
+  SESSION_NOT_FOUND
+  NOT_AUTHENTICATED
+  ORDER_NOT_FOUND
+}
+
+type UserError @shareable {
+  code: UserErrorCode!
+  message: String!
+  field: String
+}
+
+type AuthenticationPayload {
+  customer: Customer
+  accessToken: String
+  accessTokenExpiresAt: DateTime
+  errors: [UserError!]!
+}
+
+type LogoutPayload {
+  success: Boolean!
+  errors: [UserError!]!
+}
+
+type RevokeSessionPayload {
+  sessions: [Session!]!
+  errors: [UserError!]!
+}
+
+type WishlistPayload {
+  products: [Product!]!
+  errors: [UserError!]!
+}
+
+input RegisterInput {
+  email: String!
+  name: String!
+  password: String!
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+  device: String
+}
+
+type Query {
+  wishlist: [Product!]!
+  me: Customer
+  isSessionLive(sessionId: ID!): Boolean! @inaccessible
+}
+
+type Mutation {
+  register(input: RegisterInput!): AuthenticationPayload!
+  login(input: LoginInput!): AuthenticationPayload!
+  refreshSession: AuthenticationPayload!
+  logout: LogoutPayload!
+  revokeSession(sessionId: ID!): RevokeSessionPayload!
+  addToWishlist(productId: ID!): WishlistPayload!
+  removeFromWishlist(productId: ID!): WishlistPayload!
+}

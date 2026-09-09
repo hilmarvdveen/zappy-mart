@@ -1,0 +1,38 @@
+enum UserErrorCode {
+  PRODUCT_NOT_FOUND
+  OUT_OF_STOCK
+  QUANTITY_INVALID
+  CART_LINE_NOT_FOUND
+  CART_EMPTY
+  CODE_UNKNOWN
+  CODE_EXPIRED
+  CODE_EXHAUSTED
+  CODE_MINIMUM_NOT_MET
+  EMAIL_TAKEN
+  EMAIL_INVALID
+  PASSWORD_TOO_SHORT
+  PASSWORD_TOO_LONG
+  CREDENTIALS_INVALID
+  RATE_LIMITED
+  SESSION_INVALID
+  SESSION_NOT_FOUND
+  NOT_AUTHENTICATED
+  ORDER_NOT_FOUND
+}
+
+type UserError @shareable {
+  code: UserErrorCode!
+  message: String!
+  field: String
+}
+
+type ResetSeedPayload @shareable {
+  success: Boolean!
+  loadedProducts: Int!
+  errors: [UserError!]!
+}
+
+extend type Mutation {
+  resetSeed: ResetSeedPayload!
+  resetSubgraphSeed: ResetSeedPayload! @inaccessible @shareable
+}

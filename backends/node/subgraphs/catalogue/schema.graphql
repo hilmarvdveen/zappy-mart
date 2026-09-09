@@ -1,0 +1,68 @@
+extend schema
+  @link(url: "https://specs.apollo.dev/federation/v2.9", import: ["@key", "@shareable", "@inaccessible"])
+
+type Money @shareable {
+  amount: Int!
+  currency: String!
+}
+
+type Category {
+  id: ID!
+  name: String!
+  slug: String!
+}
+
+type Product @key(fields: "id") {
+  id: ID!
+  name: String!
+  slug: String!
+  description: String!
+  price: Money!
+  category: Category!
+  stock: Int!
+  imageUrl: String
+}
+
+type ProductEdge {
+  cursor: String!
+  node: Product!
+}
+
+type PageInfo @shareable {
+  hasNextPage: Boolean!
+  endCursor: String
+}
+
+type ProductConnection {
+  edges: [ProductEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input ProductFilter {
+  categorySlug: String
+  nameContains: String
+  inStockOnly: Boolean
+}
+
+input StockLine @inaccessible {
+  productId: ID!
+  quantity: Int!
+}
+
+type StockReservation @inaccessible {
+  reserved: Boolean!
+  unavailableProductId: ID
+  availableStock: Int
+}
+
+type Query {
+  products(filter: ProductFilter, first: Int = 24, after: String): ProductConnection!
+  product(slug: String!): Product
+  categories: [Category!]!
+}
+
+type Mutation {
+  reserveStock(idempotencyKey: String!, lines: [StockLine!]!): StockReservation! @inaccessible
+  releaseStock(idempotencyKey: String!): Boolean! @inaccessible
+}

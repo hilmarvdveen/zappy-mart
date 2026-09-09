@@ -1,0 +1,71 @@
+extend schema
+  @link(
+    url: "https://specs.apollo.dev/federation/v2.9"
+    import: ["@key", "@shareable", "@inaccessible", "@external", "@requires"]
+  )
+
+type Money @shareable {
+  amount: Int!
+  currency: String!
+}
+
+enum PromotionKind {
+  PERCENTAGE
+  FIXED_AMOUNT
+  FREE_SHIPPING
+}
+
+type AppliedPromotion {
+  code: String!
+  kind: PromotionKind!
+  discount: Money!
+}
+
+type Cart @key(fields: "id") {
+  id: ID!
+  subtotal: Money! @external
+  promotion: AppliedPromotion @requires(fields: "subtotal { amount currency }")
+  shipping: Money! @requires(fields: "subtotal { amount currency }")
+  total: Money! @requires(fields: "subtotal { amount currency }")
+}
+
+enum UserErrorCode {
+  PRODUCT_NOT_FOUND
+  OUT_OF_STOCK
+  QUANTITY_INVALID
+  CART_LINE_NOT_FOUND
+  CART_EMPTY
+  CODE_UNKNOWN
+  CODE_EXPIRED
+  CODE_EXHAUSTED
+  CODE_MINIMUM_NOT_MET
+  EMAIL_TAKEN
+  EMAIL_INVALID
+  PASSWORD_TOO_SHORT
+  PASSWORD_TOO_LONG
+  CREDENTIALS_INVALID
+  RATE_LIMITED
+  SESSION_INVALID
+  SESSION_NOT_FOUND
+  NOT_AUTHENTICATED
+  ORDER_NOT_FOUND
+}
+
+type UserError @shareable {
+  code: UserErrorCode!
+  message: String!
+  field: String
+}
+
+type CartPayload @shareable {
+  cart: Cart
+  availableStock: Int
+  errors: [UserError!]!
+}
+
+type Mutation {
+  applyPromotionCode(code: String!): CartPayload!
+  removePromotionCode: CartPayload!
+  clearCartPromotion(cartId: ID!): Boolean! @inaccessible
+  countPromotionUse(code: String!, orderId: ID!): Boolean! @inaccessible
+}

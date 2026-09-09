@@ -1,0 +1,27 @@
+{
+  "name": "@zappy/gateway",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "main": "./distribution/src/host/main.js",
+  "scripts": {
+    "start": "node distribution/src/host/main.js"
+  },
+  "dependencies": {
+    "@apollo/gateway": "2.14.4",
+    "@apollo/server": "5.5.1",
+    "@as-integrations/express5": "1.1.2",
+    "@zappy/shared": "1.0.0",
+    "cors": "2.8.6",
+    "express": "5.2.1",
+    "graphql": "16.14.2"
+  },
+  "devDependencies": {
+    "@zappy/accounts": "1.0.0",
+    "@zappy/cart": "1.0.0",
+    "@zappy/catalogue": "1.0.0",
+    "@zappy/ordering": "1.0.0",
+    "@zappy/promotions": "1.0.0"
+  }
+}

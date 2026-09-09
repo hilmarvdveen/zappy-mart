@@ -1,0 +1,25 @@
+{
+  "name": "@zappy/catalogue",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "main": "./distribution/src/host/main.js",
+  "scripts": {
+    "start": "node distribution/src/host/main.js"
+  },
+  "dependencies": {
+    "@apollo/server": "5.5.1",
+    "@apollo/subgraph": "2.15.0",
+    "@zappy/shared": "1.0.0",
+    "dataloader": "2.2.3",
+    "graphql": "16.14.2"
+  },
+  "exports": {
+    ".": "./distribution/src/host/main.js"
+  },
+  "types": "./distribution/src/host/main.d.ts",
+  "devDependencies": {
+    "@zappy/shared": "1.0.0"
+  }
+}

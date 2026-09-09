@@ -1,0 +1,9 @@
+type ResetSeedPayload @shareable {
+  success: Boolean!
+  loadedProducts: Int!
+  errors: [UserError!]!
+}
+
+extend type Mutation {
+  resetSubgraphSeed: ResetSeedPayload! @inaccessible @shareable
+}

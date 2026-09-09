@@ -1,0 +1,31 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./distribution"
+  },
+  "include": [
+    "src/**/*.ts",
+    "tests/**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "../shared"
+    },
+    {
+      "path": "../subgraphs/catalogue"
+    },
+    {
+      "path": "../subgraphs/cart"
+    },
+    {
+      "path": "../subgraphs/promotions"
+    },
+    {
+      "path": "../subgraphs/ordering"
+    },
+    {
+      "path": "../subgraphs/accounts"
+    }
+  ]
+}

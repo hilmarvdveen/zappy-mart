@@ -1,0 +1,41 @@
+name: Node federated graph
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backends/node/**"
+      - "contract/**"
+      - ".github/workflows/node.yml"
+      - "tools/conformance/**"
+  pull_request:
+    paths:
+      - "backends/node/**"
+      - "contract/**"
+      - ".github/workflows/node.yml"
+      - "tools/conformance/**"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backends/node
+    env:
+      ZAPPY_SUBGRAPH_TIMEOUT_MILLISECONDS: 15000
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backends/node/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm run compose
+      - run: npm run contract-diff
+      - run: npm test
+      - run: npm ci
+        working-directory: tools/conformance
+      - run: node tools/run-conformance.mjs
+      - run: node tools/run-conformance.mjs

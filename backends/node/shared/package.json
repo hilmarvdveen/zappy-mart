@@ -1,0 +1,28 @@
+{
+  "name": "@zappy/shared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./distribution/src/index.js",
+    "./testing": "./distribution/src/testing/index.js"
+  },
+  "types": "./distribution/src/index.d.ts",
+  "dependencies": {
+    "@apollo/server": "5.5.1",
+    "@apollo/subgraph": "2.15.0",
+    "@as-integrations/express5": "1.1.2",
+    "cors": "2.8.6",
+    "dataloader": "2.2.3",
+    "express": "5.2.1",
+    "graphql": "16.14.2",
+    "jose": "6.2.12",
+    "pg": "8.23.0"
+  },
+  "devDependencies": {
+    "@types/cors": "2.8.19",
+    "@types/express": "5.0.6",
+    "@types/pg": "8.23.1"
+  }
+}
