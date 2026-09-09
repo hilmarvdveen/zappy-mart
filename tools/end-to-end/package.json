@@ -1,0 +1,19 @@
+{
+  "name": "zappy-mart-end-to-end",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "test:smoke": "playwright test tests/storeFrontIsUp.spec.ts",
+    "install-browser": "playwright install --with-deps chromium",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "24.13.3",
+    "typescript": "6.0.3"
+  }
+}

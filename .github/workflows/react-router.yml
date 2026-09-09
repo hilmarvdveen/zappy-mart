@@ -1,0 +1,96 @@
+name: React Router store front
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontends/react-router/**"
+      - "tools/end-to-end/**"
+      - "contract/**"
+      - ".github/workflows/react-router.yml"
+  pull_request:
+    paths:
+      - "frontends/react-router/**"
+      - "tools/end-to-end/**"
+      - "contract/**"
+      - ".github/workflows/react-router.yml"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontends/react-router
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontends/react-router/package-lock.json
+      - run: npm ci
+      - run: npm run generate-graphql-types
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  end-to-end:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    env:
+      GRAPHQL_URL: http://localhost:4000/graphql
+      FRONTEND_URL: http://localhost:5173
+      RESET_SEED: "true"
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: tools/end-to-end/package-lock.json
+
+      - name: Start the Zappy Mart API
+        working-directory: tools/mock-server
+        run: |
+          npm ci
+          nohup node server.mjs > mock-server.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail --output /dev/null \
+              --header "Content-Type: application/json" \
+              --header "Origin: http://localhost:5173" \
+              --data '{"query":"{ categories { slug } }"}' \
+              http://localhost:4000/graphql; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "The Zappy Mart API did not answer within sixty seconds."
+          exit 1
+
+      - name: Build and start the store front
+        working-directory: frontends/react-router
+        env:
+          PORT: "5173"
+          SESSION_SECRET: continuous-integration-session-secret
+        run: |
+          npm ci
+          npm run generate-graphql-types
+          npm run build
+          nohup npm run start > store-front.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail --output /dev/null http://localhost:5173/; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "The store front did not answer within sixty seconds."
+          exit 1
+
+      - name: Run the shared end to end suite
+        working-directory: tools/end-to-end
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npm test

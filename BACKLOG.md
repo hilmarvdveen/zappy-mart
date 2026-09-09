@@ -202,7 +202,7 @@ application, and the shared suites pass where they apply.
 | Z2c | `tools/mock-server`, an in-memory implementation of the whole contract over the seed on port 4000: the first target the runner was proven against (33 of 33) and the backend the three frontends develop against until the real ones are green | Z2 | 3 | done 9 September 2026 |
 | Z3 | The C# backend: hexagonal monolith, five modules, EF Core on SQLite by default with a PostgreSQL profile, Hot Chocolate, the security model, unit and integration tests, conformance green against schema 1.0, README walk through | Z2 | 12 | in progress since 9 September 2026 |
 | Z4 | `docs/patterns.md` and `docs/security.md` written against the C# code with file paths | Z3 | 3 | open |
-| Z5 | The React Router frontend against the C# backend, end to end suite, README | Z3 | 8 | open |
+| Z5 | The React Router frontend against the C# backend, end to end suite, README | Z3 | 8 | done 9 September 2026 against the mock server: 114 tests, lint, typecheck and build green, the four end to end journeys green (one without JavaScript), the C# backend still to be pointed at |
 | Z6 | The Java backend, same modules, same tests, conformance green, README | Z2 | 10 | open |
 | Z7 | The Kotlin backend, same, README explaining what the language changes against Z6 | Z6 | 8 | open |
 | Z8 | The Next.js frontend, end to end green, README | Z3 | 8 | done 9 September 2026 against the mock server: 61 tests, lint and build green, the whole flow verified in a browser, the shared end to end suite still to be pointed at it |

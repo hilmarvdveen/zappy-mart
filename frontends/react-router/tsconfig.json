@@ -1,0 +1,38 @@
+{
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "**/.server/**/*",
+    "**/.client/**/*",
+    ".react-router/types/**/*"
+  ],
+  "exclude": ["build", "node_modules"],
+  "compilerOptions": {
+    "lib": ["DOM", "DOM.Iterable", "ES2023"],
+    "types": ["node", "vite/client"],
+    "target": "ES2023",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "rootDirs": [".", "./.react-router/types"],
+    "paths": {
+      "~/*": ["./app/*"]
+    },
+    "esModuleInterop": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "plugins": [
+      {
+        "name": "@0no-co/graphqlsp",
+        "schema": "../../contract/schema.graphql",
+        "tadaOutputLocation": "./app/graphql/graphqlEnvironment.d.ts"
+      }
+    ]
+  }
+}
