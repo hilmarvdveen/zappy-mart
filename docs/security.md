@@ -94,3 +94,19 @@ failure.
 3. The login, refresh and logout use cases.
 4. The GraphQL adapter reading the bearer header and the cookie.
 5. The frontend shape, one section per frontend README.
+
+## Where each rule lives in the C# backend
+
+Checked against `backends/dotnet` on 9 September 2026. The Java, Kotlin
+and Node backends keep the same shape under their own names, and each
+README says where.
+
+| Rule | File (under `backends/dotnet`) |
+|---|---|
+| The access token, signed with RS256, with the session id inside | `src/Zappy.Adapters.Security/JwtTokenIssuer.cs`, keys from `src/Zappy.Adapters.Security/SigningKeys.cs` |
+| The session checked on every bearer request, so a logout or a revocation takes effect at once | `src/Zappy.Host/BearerTokenSetup.cs` |
+| The refresh token, its rotation and the family revocation on a replay | `src/Zappy.Domain/Accounts/RefreshToken.cs`, stored through `src/Zappy.Application/Accounts/ISessionRepository.cs` |
+| The two cookies, `zappy_refresh` and `zappy_cart`, Secure over HTTPS | `src/Zappy.Adapters.GraphQL/Requests/Cookies.cs` |
+| The Origin check on every mutation, before any resolver runs | `src/Zappy.Adapters.GraphQL/Origin/OriginCheck.cs` |
+| Argon2id with the OWASP parameters | `src/Zappy.Adapters.Security/Argon2idPasswordHasher.cs` behind `src/Zappy.Application/Accounts/IPasswordHasher.cs` |
+| The rate limit on login | `src/Zappy.Adapters.Security/InMemoryRateLimiter.cs` behind `src/Zappy.Application/Accounts/IRateLimiter.cs` |
