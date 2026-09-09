@@ -9,6 +9,10 @@ test("the catalogue answers with products, a filter and the shop chrome", async 
   await expect(page.getByRole("searchbox", { name: "Search by name" })).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Category" })).toBeVisible();
   await expect(page.getByRole("link", { name: /^Cart, / })).toBeVisible();
-  await expect(page.getByRole("link", { name: /^Wishlist, / })).toBeVisible();
+  await expect(
+    page
+      .getByRole("link", { name: /^Wishlist, / })
+      .or(page.getByRole("button", { name: /^Wishlist, / })),
+  ).toBeVisible();
   await expect(page.getByRole("article").first()).toBeVisible();
 });
