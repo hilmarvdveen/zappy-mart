@@ -4,7 +4,4 @@ module.exports = {
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/src/setup-jest.ts'],
   moduleDirectories: ['node_modules', 'src'],
-  fakeTimers: {
-    enableGlobally: true,
-  },
 };

@@ -1,0 +1,7 @@
+@if (sentences().length > 0) {
+  <ul class="user-errors" role="alert">
+    @for (sentence of sentences(); track sentence) {
+      <li class="user-errors__item">{{ sentence }}</li>
+    }
+  </ul>
+}

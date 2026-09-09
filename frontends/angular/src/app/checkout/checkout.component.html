@@ -1,0 +1,69 @@
+<section class="checkout container">
+  <h1 class="checkout__heading">Checkout</h1>
+
+  <app-user-errors [errors]="errors()" [problem]="problem()" />
+
+  @if (!signedIn()) {
+    <p class="checkout__status" role="status">
+      An order belongs to a customer, so please log in or create an account to place it.
+    </p>
+    <app-login-form />
+  } @else if (empty()) {
+    <p class="checkout__status" role="status">Your cart is empty, so there is nothing to order.</p>
+    <a class="button" [routerLink]="['/']">Back to the catalogue</a>
+  } @else {
+    @if (customer(); as signedInCustomer) {
+      <p class="checkout__status" role="status">
+        Ordering as {{ signedInCustomer.name }} ({{ signedInCustomer.email }}).
+      </p>
+    }
+
+    <table class="checkout__table">
+      <caption class="checkout__caption">
+        What you are about to order
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Product</th>
+          <th scope="col">Quantity</th>
+          <th scope="col">Line total</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (line of lines(); track line.id) {
+          <tr>
+            <th scope="row">{{ line.product.name }}</th>
+            <td>{{ line.quantity }}</td>
+            <td>{{ line.lineTotal | money }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    @if (cart(); as currentCart) {
+      <dl class="checkout__summary">
+        <dt>Subtotal</dt>
+        <dd>{{ currentCart.subtotal | money }}</dd>
+
+        @if (currentCart.promotion; as promotion) {
+          <dt>Promotion {{ promotion.code }}</dt>
+          <dd>{{ promotion.discount | money }}</dd>
+        }
+
+        <dt>Shipping</dt>
+        <dd>{{ currentCart.shipping | money }}</dd>
+
+        <dt class="checkout__total-term">Total</dt>
+        <dd class="checkout__total-value">{{ currentCart.total | money }}</dd>
+      </dl>
+    }
+
+    <p class="checkout__payment">Payment is simulated, so the order is placed as paid.</p>
+
+    <button class="button" type="button" [disabled]="placing()" (click)="placeOrder()">
+      Place order
+    </button>
+
+    <a class="checkout__back" [routerLink]="['/cart']">Back to your cart</a>
+  }
+</section>

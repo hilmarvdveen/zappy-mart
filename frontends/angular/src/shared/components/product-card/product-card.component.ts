@@ -1,17 +1,19 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { Product } from '../../models/product.model';
+import { Component, input, output } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { ProductSummaryFragment } from '../../../app/api/generated/contract';
+import { MoneyPipe } from '../../money.pipe';
+import { ProductImageComponent } from '../product-image/product-image.component';
 
 @Component({
   selector: 'app-product-card',
   templateUrl: './product-card.component.html',
   styleUrl: './product-card.component.scss',
+  imports: [RouterLink, MoneyPipe, ProductImageComponent],
 })
 export default class ProductCardComponent {
-  @Input({ required: true }) product!: Product;
-  @Input() inWishlist = false;
-  @Output() toggleWishlist = new EventEmitter<Product>();
+  readonly product = input.required<ProductSummaryFragment>();
+  readonly inWishlist = input(false);
 
-  onToggleWishlist() {
-    this.toggleWishlist.emit(this.product);
-  }
+  readonly addToCart = output<ProductSummaryFragment>();
+  readonly toggleWishlist = output<ProductSummaryFragment>();
 }

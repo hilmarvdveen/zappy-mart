@@ -1,0 +1,63 @@
+<section class="catalogue container">
+  <h1 class="catalogue__heading">Catalogue</h1>
+
+  <form class="catalogue__filter" aria-label="Filter the catalogue" (submit)="applyFilter($event)">
+    <div class="field">
+      <label class="field__label" for="catalogue-search">Search by name</label>
+      <input
+        class="field__input"
+        id="catalogue-search"
+        name="search"
+        type="search"
+        [value]="searchTerm()"
+        (input)="searchTerm.set(valueOf($event))"
+      />
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="catalogue-category">Category</label>
+      <select
+        class="field__input"
+        id="catalogue-category"
+        name="category"
+        (change)="chosenCategory.set(valueOf($event))"
+      >
+        <option value="" [selected]="chosenCategory() === ''">All products</option>
+        @for (option of categories(); track option.id) {
+          <option [value]="option.slug" [selected]="chosenCategory() === option.slug">
+            {{ option.name }}
+          </option>
+        }
+      </select>
+    </div>
+
+    <button class="button catalogue__filter-action" type="submit">Filter</button>
+  </form>
+
+  <app-user-errors [errors]="errors()" [note]="note()" [problem]="problem()" />
+
+  @if (loading()) {
+    <p class="catalogue__status" role="status">Loading the catalogue.</p>
+  } @else if (unreachable()) {
+    <p class="catalogue__status" role="status">
+      The catalogue could not be loaded. Start the mock server on port 4000 and try again.
+    </p>
+  } @else {
+    <p class="catalogue__status" role="status">{{ totalCount() }} products match.</p>
+
+    <div class="catalogue__grid">
+      @for (product of products(); track product.id) {
+        <app-product-card
+          [product]="product"
+          [inWishlist]="saved(product)"
+          (addToCart)="addToCart($event)"
+          (toggleWishlist)="toggleWishlist($event)"
+        />
+      }
+    </div>
+
+    @if (canShowMore()) {
+      <button class="button" type="button" (click)="showMore()">Show more products</button>
+    }
+  }
+</section>

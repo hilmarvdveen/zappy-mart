@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - "frontends/angular/**"
+      - "contract/schema.graphql"
       - ".github/workflows/angular.yml"
   pull_request:
     paths:
       - "frontends/angular/**"
+      - "contract/schema.graphql"
       - ".github/workflows/angular.yml"
 
 jobs:
@@ -25,6 +27,9 @@ jobs:
           cache: npm
           cache-dependency-path: frontends/angular/package-lock.json
       - run: npm ci
+      - run: npm run generate
+      - name: The generated types match contract/schema.graphql
+        run: git diff --exit-code -- src/app/api/generated
       - run: npm run lint
       - run: npm test -- --ci
       - run: npm run build

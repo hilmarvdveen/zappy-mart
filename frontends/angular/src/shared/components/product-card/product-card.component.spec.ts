@@ -1,29 +1,28 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Product } from '../../models/product.model';
 import { By } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
+import { ProductSummaryFragment } from '../../../app/api/generated/contract';
 import ProductCardComponent from './product-card.component';
 
 describe('ProductCardComponent', () => {
   let component: ProductCardComponent;
   let fixture: ComponentFixture<ProductCardComponent>;
-  let mockProduct: Product;
+  let mockProduct: ProductSummaryFragment;
 
   beforeEach(() => {
     mockProduct = {
-      id: 1,
-      title: 'Test Product',
-      price: 42.5,
-      image: 'test-image.jpg',
-      category: 'Test Category',
-      description: 'A test product description',
-      rating: {
-        rate: 0,
-        count: 0,
-      },
+      id: 'product-03',
+      name: 'Mens Cotton Jacket',
+      slug: 'mens-cotton-jacket',
+      stock: 8,
+      imageUrl: '/images/products/mens-cotton-jacket.svg',
+      price: { amount: 4250, currency: 'EUR' },
+      category: { id: 'category-mens-clothing', name: "Men's clothing", slug: 'mens-clothing' },
     };
 
     TestBed.configureTestingModule({
       imports: [ProductCardComponent],
+      providers: [provideRouter([])],
     });
 
     fixture = TestBed.createComponent(ProductCardComponent);
@@ -33,9 +32,10 @@ describe('ProductCardComponent', () => {
   });
 
   it.each([
-    ['.card__title', 'Test Product'],
-    ['.card__price', '€42.5'],
-    ['.card__category', 'Test Category'],
+    ['.card__title', 'Mens Cotton Jacket'],
+    ['.card__price', '€42.50'],
+    ['.card__category', "Men's clothing"],
+    ['.card__stock', '8 in stock'],
   ])('should render %s with correct content', (selector: string, expected: string) => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector(selector)?.textContent).toContain(expected);
@@ -43,32 +43,57 @@ describe('ProductCardComponent', () => {
 
   it('should render product image with correct src', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.card__image')?.getAttribute('src')).toBe('test-image.jpg');
+    expect(compiled.querySelector('.product-image')?.getAttribute('src')).toBe(
+      '/images/products/mens-cotton-jacket.svg'
+    );
   });
 
-  it('should show "Voeg toe aan favorieten" when inWishlist is false', () => {
+  it('should link to the product page', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.card__link')?.getAttribute('href')).toBe(
+      '/product/mens-cotton-jacket'
+    );
+  });
+
+  it('should show "Save to wishlist" when inWishlist is false', () => {
     fixture.componentRef.setInput('inWishlist', false);
     fixture.detectChanges();
 
     const button = fixture.debugElement.query(By.css('.card__action-wish-list'));
-    expect(button.nativeElement.textContent).toContain('Voeg toe aan favorieten');
+    expect(button.nativeElement.textContent).toContain('Save to wishlist');
   });
 
-  it('should show "Verwijder uit favorieten" when inWishlist is true', () => {
+  it('should show "Remove from wishlist" when inWishlist is true', () => {
     fixture.componentRef.setInput('inWishlist', true);
     fixture.detectChanges();
 
     const button = fixture.debugElement.query(By.css('.card__action-wish-list'));
-    expect(button.nativeElement.textContent).toContain('Verwijder uit favorieten');
+    expect(button.nativeElement.textContent).toContain('Remove from wishlist');
   });
 
-  it('should emit toggleWishlist event when button is clicked', () => {
+  it('should emit toggleWishlist event when the wishlist button is clicked', () => {
+    const emitted: ProductSummaryFragment[] = [];
+    component.toggleWishlist.subscribe((product) => emitted.push(product));
+
+    fixture.debugElement.query(By.css('.card__action-wish-list')).nativeElement.click();
+
+    expect(emitted).toEqual([mockProduct]);
+  });
+
+  it('should emit addToCart event when the cart button is clicked', () => {
+    const emitted: ProductSummaryFragment[] = [];
+    component.addToCart.subscribe((product) => emitted.push(product));
+
+    fixture.debugElement.query(By.css('.card__action')).nativeElement.click();
+
+    expect(emitted).toEqual([mockProduct]);
+  });
+
+  it('should disable the cart button when the product has no stock', () => {
+    fixture.componentRef.setInput('product', { ...mockProduct, stock: 0 });
     fixture.detectChanges();
-    jest.spyOn(component.toggleWishlist, 'emit');
 
-    const button = fixture.debugElement.query(By.css('.card__action-wish-list'));
-    button.triggerEventHandler('click', null);
-
-    expect(component.toggleWishlist.emit).toHaveBeenCalledWith(component.product);
+    const button = fixture.debugElement.query(By.css('.card__action'));
+    expect(button.nativeElement.disabled).toBe(true);
   });
 });

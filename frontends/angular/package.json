@@ -6,12 +6,13 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
+    "generate": "graphql-codegen --config codegen.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "format": "prettier --write \"src/**/*.{ts,html,scss,css,js,json,md}\"",
     "lint": "ng lint",
-    "lint:fix": "eslint . --ext .ts,.html --fix"
+    "lint:fix": "eslint . --fix"
   },
   "private": true,
   "dependencies": {
@@ -20,6 +21,10 @@
     "@angular/core": "^22.1.5",
     "@angular/platform-browser": "^22.1.5",
     "@angular/router": "^22.1.5",
+    "@apollo/client": "4.2.12",
+    "@graphql-typed-document-node/core": "3.2.0",
+    "apollo-angular": "14.2.0",
+    "graphql": "17.0.2",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
@@ -28,6 +33,9 @@
     "@angular/cli": "^22.1.7",
     "@angular/compiler-cli": "^22.1.5",
     "@eslint/js": "^10.0.1",
+    "@graphql-codegen/cli": "7.4.0",
+    "@graphql-codegen/typed-document-node": "7.1.0",
+    "@graphql-codegen/typescript-operations": "6.1.6",
     "@types/jest": "^30.0.0",
     "angular-eslint": "22.5.0",
     "eslint": "^10.10.0",

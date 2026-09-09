@@ -1,0 +1,19 @@
+.product-image {
+  width: 100%;
+  object-fit: contain;
+  background: #f9fafb;
+  border-radius: 0.375rem;
+
+  &--small {
+    width: 3.5rem;
+    height: 3.5rem;
+  }
+
+  &--medium {
+    height: 12rem;
+  }
+
+  &--large {
+    height: 20rem;
+  }
+}

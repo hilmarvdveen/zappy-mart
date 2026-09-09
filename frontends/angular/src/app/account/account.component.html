@@ -1,0 +1,78 @@
+<section class="account container">
+  <h1 class="account__heading">Your account</h1>
+
+  <app-user-errors [errors]="errors()" [problem]="problem()" />
+
+  @if (!signedIn()) {
+    <p class="account__status" role="status">
+      Log in to see your order history and the devices you are logged in on.
+    </p>
+    <app-login-form />
+  } @else {
+    @if (customer(); as signedInCustomer) {
+      <p class="account__status" role="status">
+        Logged in as {{ signedInCustomer.name }} ({{ signedInCustomer.email }}).
+      </p>
+    }
+
+    <button class="button button--quiet" type="button" (click)="logOut()">Log out</button>
+
+    <h2 class="account__section-heading">Order history</h2>
+
+    @if (loadingOrders()) {
+      <p class="account__status" role="status">Loading your orders.</p>
+    } @else if (orderCount() === 0) {
+      <p class="account__status" role="status">You have not placed an order yet.</p>
+      <a class="button" [routerLink]="['/']">Back to the catalogue</a>
+    } @else {
+      <table class="account__table">
+        <caption class="account__caption">
+          Your orders, newest first
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Order</th>
+            <th scope="col">Placed</th>
+            <th scope="col">Status</th>
+            <th scope="col">Total</th>
+            <th scope="col">Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (order of orders(); track order.id) {
+            <tr>
+              <th scope="row">{{ order.number }}</th>
+              <td>{{ order.placedAt }}</td>
+              <td>{{ order.status }}</td>
+              <td>{{ order.total | money }}</td>
+              <td>
+                <a [routerLink]="['/orders', order.id]">See order {{ order.number }}</a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+
+    <h2 class="account__section-heading">Your sessions</h2>
+
+    <ul class="account__sessions">
+      @for (session of sessions(); track session.id) {
+        <li class="account__session">
+          <span class="account__session-device">
+            {{ session.device }}
+            @if (session.current) {
+              <span class="account__session-current">this device</span>
+            }
+          </span>
+          <span class="account__session-times">
+            Logged in {{ session.createdAt }}, last used {{ session.lastUsedAt }}
+          </span>
+          <button class="button button--quiet" type="button" (click)="revokeSession(session.id)">
+            Revoke {{ session.device }}
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</section>

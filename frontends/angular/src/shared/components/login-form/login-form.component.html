@@ -1,0 +1,66 @@
+<form
+  class="login-form"
+  [attr.aria-label]="registering() ? 'Create an account' : 'Log in'"
+  (submit)="submit($event)"
+>
+  <h2 class="login-form__heading">
+    {{ registering() ? 'Create an account' : 'Log in' }}
+  </h2>
+
+  <app-user-errors [errors]="errors()" [problem]="problem()" />
+
+  @if (registering()) {
+    <div class="field">
+      <label class="field__label" for="login-form-name">Name</label>
+      <input
+        class="field__input"
+        id="login-form-name"
+        name="name"
+        type="text"
+        autocomplete="name"
+        required
+        [value]="name()"
+        (input)="name.set(valueOf($event))"
+      />
+    </div>
+  }
+
+  <div class="field">
+    <label class="field__label" for="login-form-email">Email address</label>
+    <input
+      class="field__input"
+      id="login-form-email"
+      name="email"
+      type="email"
+      autocomplete="email"
+      required
+      [value]="email()"
+      (input)="email.set(valueOf($event))"
+    />
+  </div>
+
+  <div class="field">
+    <label class="field__label" for="login-form-password">Password</label>
+    <input
+      class="field__input"
+      id="login-form-password"
+      name="password"
+      type="password"
+      [attr.autocomplete]="registering() ? 'new-password' : 'current-password'"
+      required
+      [value]="password()"
+      (input)="password.set(valueOf($event))"
+    />
+    @if (registering()) {
+      <p class="field__hint">At least twelve characters.</p>
+    }
+  </div>
+
+  <button class="button" type="submit" [disabled]="busy()">
+    {{ registering() ? 'Create account' : 'Log in' }}
+  </button>
+
+  <button class="login-form__switch" type="button" (click)="switchMode()">
+    {{ registering() ? 'I already have an account' : 'I do not have an account yet' }}
+  </button>
+</form>

@@ -1,0 +1,80 @@
+.account {
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+
+  &__heading {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  &__section-heading {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 2rem 0 0.75rem;
+  }
+
+  &__status {
+    color: #4b5563;
+    margin-bottom: 1rem;
+  }
+
+  &__table {
+    width: 100%;
+    max-width: 48rem;
+    border-collapse: collapse;
+
+    th,
+    td {
+      text-align: left;
+      padding: 0.5rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    a {
+      text-decoration: underline;
+    }
+  }
+
+  &__caption {
+    text-align: left;
+    padding-bottom: 0.5rem;
+    color: #4b5563;
+  }
+
+  &__sessions {
+    list-style: none;
+    padding: 0;
+    max-width: 48rem;
+  }
+
+  &__session {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  &__session-device {
+    font-weight: 600;
+    min-width: 14rem;
+  }
+
+  &__session-current {
+    margin-left: 0.5rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    background: #d1fae5;
+    color: #065f46;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  &__session-times {
+    color: #4b5563;
+    font-size: 0.875rem;
+    flex: 1 1 16rem;
+  }
+}

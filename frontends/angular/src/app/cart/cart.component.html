@@ -1,0 +1,109 @@
+<section class="cart container">
+  <h1 class="cart__heading">Your cart</h1>
+
+  <app-user-errors [errors]="errors()" [note]="note()" [problem]="problem()" />
+
+  @if (loading()) {
+    <p class="cart__status" role="status">Loading your cart.</p>
+  } @else if (unreachable()) {
+    <p class="cart__status" role="status">
+      Your cart could not be loaded. Start the mock server on port 4000 and try again.
+    </p>
+  } @else if (empty()) {
+    <p class="cart__status" role="status">Your cart is empty.</p>
+    <a class="button" [routerLink]="['/']">Back to the catalogue</a>
+  } @else {
+    <p class="cart__status" role="status">{{ itemCount() }} items in your cart.</p>
+
+    <table class="cart__table">
+      <caption class="cart__caption">
+        The products in your cart
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Product</th>
+          <th scope="col">Price</th>
+          <th scope="col">Quantity</th>
+          <th scope="col">Line total</th>
+          <th scope="col">Remove</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (line of lines(); track line.id) {
+          <tr>
+            <th class="cart__product" scope="row">
+              <app-product-image
+                [imageUrl]="line.product.imageUrl"
+                [name]="line.product.name"
+                size="small"
+                [decorative]="true"
+              />
+              <a [routerLink]="['/product', line.product.slug]">{{ line.product.name }}</a>
+            </th>
+            <td>{{ line.product.price | money }}</td>
+            <td>
+              <label class="cart__quantity-label" [for]="'cart-quantity-' + line.id">
+                Quantity of {{ line.product.name }}
+              </label>
+              <input
+                class="field__input cart__quantity"
+                [id]="'cart-quantity-' + line.id"
+                type="number"
+                min="1"
+                [max]="line.product.stock"
+                [value]="line.quantity"
+                (change)="changeQuantity(line.id, $event)"
+              />
+            </td>
+            <td>{{ line.lineTotal | money }}</td>
+            <td>
+              <button class="button button--quiet" type="button" (click)="removeLine(line.id)">
+                Remove {{ line.product.name }}
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    <form class="cart__promotion" aria-label="Promotion code" (submit)="applyPromotionCode($event)">
+      <label class="field__label" for="cart-promotion-code">Promotion code</label>
+      <div class="cart__promotion-row">
+        <input
+          class="field__input"
+          id="cart-promotion-code"
+          name="promotionCode"
+          type="text"
+          [value]="promotionCode()"
+          (input)="promotionCode.set(valueOf($event))"
+        />
+        <button class="button" type="submit">Apply</button>
+      </div>
+    </form>
+
+    @if (cart(); as currentCart) {
+      <dl class="cart__summary">
+        <dt>Subtotal</dt>
+        <dd>{{ currentCart.subtotal | money }}</dd>
+
+        @if (currentCart.promotion; as promotion) {
+          <dt>Promotion {{ promotion.code }}</dt>
+          <dd>
+            {{ promotion.discount | money }}
+            <button class="button button--quiet" type="button" (click)="removePromotionCode()">
+              Remove promotion code
+            </button>
+          </dd>
+        }
+
+        <dt>Shipping</dt>
+        <dd>{{ currentCart.shipping | money }}</dd>
+
+        <dt class="cart__total-term">Total</dt>
+        <dd class="cart__total-value">{{ currentCart.total | money }}</dd>
+      </dl>
+    }
+
+    <a class="button" [routerLink]="['/checkout']">Go to checkout</a>
+  }
+</section>

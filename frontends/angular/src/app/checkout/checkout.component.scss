@@ -1,0 +1,64 @@
+.checkout {
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+
+  &__heading {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  &__status {
+    color: #4b5563;
+    margin-bottom: 1rem;
+  }
+
+  &__table {
+    width: 100%;
+    max-width: 40rem;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+
+    th,
+    td {
+      text-align: left;
+      padding: 0.5rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+  }
+
+  &__caption {
+    text-align: left;
+    padding-bottom: 0.5rem;
+    color: #4b5563;
+  }
+
+  &__summary {
+    display: grid;
+    grid-template-columns: minmax(0, 12rem) minmax(0, 1fr);
+    gap: 0.5rem 1rem;
+    max-width: 32rem;
+    margin-bottom: 1rem;
+
+    dt {
+      color: #4b5563;
+    }
+  }
+
+  &__total-term,
+  &__total-value {
+    font-weight: 700;
+    font-size: 1.125rem;
+  }
+
+  &__payment {
+    color: #4b5563;
+    margin-bottom: 1rem;
+  }
+
+  &__back {
+    display: inline-block;
+    margin-left: 1rem;
+    text-decoration: underline;
+  }
+}

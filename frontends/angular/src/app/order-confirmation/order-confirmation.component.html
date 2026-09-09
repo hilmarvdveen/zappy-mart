@@ -1,0 +1,67 @@
+<section class="order-confirmation container">
+  @if (loading()) {
+    <h1 class="order-confirmation__heading">Order</h1>
+    <p class="order-confirmation__status" role="status">Loading your order.</p>
+  } @else if (unreachable()) {
+    <h1 class="order-confirmation__heading">Order</h1>
+    <p class="order-confirmation__status" role="status">
+      Your order could not be loaded. Start the mock server on port 4000 and try again.
+    </p>
+  } @else if (order(); as placedOrder) {
+    <h1 class="order-confirmation__heading">Thank you for your order</h1>
+
+    <p class="order-confirmation__status" role="status">
+      Order {{ placedOrder.number }} was placed on {{ placedOrder.placedAt }} and is
+      {{ placedOrder.status }}.
+    </p>
+
+    <table class="order-confirmation__table">
+      <caption class="order-confirmation__caption">
+        What you ordered
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Product</th>
+          <th scope="col">Unit price</th>
+          <th scope="col">Quantity</th>
+          <th scope="col">Line total</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (line of placedOrder.lines; track line.productName) {
+          <tr>
+            <th scope="row">{{ line.productName }}</th>
+            <td>{{ line.unitPrice | money }}</td>
+            <td>{{ line.quantity }}</td>
+            <td>{{ line.lineTotal | money }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    <dl class="order-confirmation__summary">
+      <dt>Subtotal</dt>
+      <dd>{{ placedOrder.subtotal | money }}</dd>
+
+      @if (placedOrder.promotionCode !== null) {
+        <dt>Promotion {{ placedOrder.promotionCode }}</dt>
+        <dd>{{ placedOrder.discount | money }}</dd>
+      }
+
+      <dt>Shipping</dt>
+      <dd>{{ placedOrder.shipping | money }}</dd>
+
+      <dt class="order-confirmation__total-term">Total</dt>
+      <dd class="order-confirmation__total-value">{{ placedOrder.total | money }}</dd>
+    </dl>
+
+    <a class="button" [routerLink]="['/']">Back to the catalogue</a>
+    <a class="order-confirmation__account" [routerLink]="['/account']">See your order history</a>
+  } @else {
+    <h1 class="order-confirmation__heading">Order not found</h1>
+    <p class="order-confirmation__status" role="status">
+      No order with that address belongs to you.
+    </p>
+    <a class="button" [routerLink]="['/account']">Go to your account</a>
+  }
+</section>

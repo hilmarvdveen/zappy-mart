@@ -1,0 +1,87 @@
+.cart {
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+
+  &__heading {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  &__status {
+    color: #4b5563;
+    margin-bottom: 1rem;
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+
+    th,
+    td {
+      text-align: left;
+      padding: 0.75rem 0.5rem;
+      border-bottom: 1px solid #e5e7eb;
+      vertical-align: middle;
+    }
+  }
+
+  &__caption {
+    text-align: left;
+    padding-bottom: 0.5rem;
+    color: #4b5563;
+  }
+
+  &__product {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 500;
+
+    a {
+      text-decoration: underline;
+    }
+  }
+
+  &__quantity-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  &__quantity {
+    max-width: 5rem;
+  }
+
+  &__promotion {
+    margin-bottom: 1.5rem;
+  }
+
+  &__promotion-row {
+    display: flex;
+    gap: 0.5rem;
+    max-width: 26rem;
+  }
+
+  &__summary {
+    display: grid;
+    grid-template-columns: minmax(0, 12rem) minmax(0, 1fr);
+    gap: 0.5rem 1rem;
+    max-width: 32rem;
+    margin-bottom: 1.5rem;
+
+    dt {
+      color: #4b5563;
+    }
+  }
+
+  &__total-term,
+  &__total-value {
+    font-weight: 700;
+    font-size: 1.125rem;
+  }
+}

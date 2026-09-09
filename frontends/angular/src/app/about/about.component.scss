@@ -1,0 +1,16 @@
+.about {
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+
+  &__heading {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  &__paragraph {
+    max-width: 44rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+}

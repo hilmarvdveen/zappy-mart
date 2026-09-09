@@ -1,0 +1,110 @@
+fragment SessionDetail on Session {
+  id
+  device
+  createdAt
+  lastUsedAt
+  current
+}
+
+fragment CustomerDetail on Customer {
+  id
+  email
+  name
+  createdAt
+  sessions {
+    ...SessionDetail
+  }
+}
+
+fragment Authentication on AuthenticationPayload {
+  customer {
+    ...CustomerDetail
+  }
+  accessToken
+  accessTokenExpiresAt
+  errors {
+    code
+    message
+    field
+  }
+}
+
+query CurrentCustomer {
+  me {
+    ...CustomerDetail
+  }
+}
+
+query Wishlist {
+  wishlist {
+    ...ProductSummary
+  }
+}
+
+mutation Register($input: RegisterInput!) {
+  register(input: $input) {
+    ...Authentication
+  }
+}
+
+mutation Login($input: LoginInput!) {
+  login(input: $input) {
+    ...Authentication
+  }
+}
+
+mutation RefreshSession {
+  refreshSession {
+    ...Authentication
+  }
+}
+
+mutation Logout {
+  logout {
+    success
+    errors {
+      code
+      message
+      field
+    }
+  }
+}
+
+mutation RevokeSession($sessionId: ID!) {
+  revokeSession(sessionId: $sessionId) {
+    sessions {
+      ...SessionDetail
+    }
+    errors {
+      code
+      message
+      field
+    }
+  }
+}
+
+mutation AddToWishlist($productId: ID!) {
+  addToWishlist(productId: $productId) {
+    products {
+      ...ProductSummary
+    }
+    errors {
+      code
+      message
+      field
+    }
+  }
+}
+
+mutation RemoveFromWishlist($productId: ID!) {
+  removeFromWishlist(productId: $productId) {
+    products {
+      ...ProductSummary
+    }
+    errors {
+      code
+      message
+      field
+    }
+  }
+}

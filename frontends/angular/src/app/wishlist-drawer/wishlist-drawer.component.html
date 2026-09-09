@@ -1,0 +1,51 @@
+<div class="wishlist-drawer">
+  <button
+    class="wishlist-drawer__overlay"
+    type="button"
+    aria-label="Close your wishlist"
+    (click)="closeDrawer()"
+    (keydown.escape)="closeDrawer()"
+  ></button>
+
+  <aside class="wishlist-drawer__content" aria-label="Your wishlist">
+    <button class="wishlist-drawer__close" type="button" (click)="closeDrawer()">
+      Close your wishlist
+    </button>
+
+    <h2 class="wishlist-drawer__title">Your wishlist</h2>
+
+    <app-user-errors [problem]="problem()" />
+
+    @if (products().length === 0) {
+      <p class="wishlist-drawer__empty" role="status">You have not saved a product yet.</p>
+    } @else {
+      <ul class="wishlist-drawer__list">
+        @for (product of products(); track product.id) {
+          <li class="wishlist-drawer__item">
+            <app-product-image
+              [imageUrl]="product.imageUrl"
+              [name]="product.name"
+              size="small"
+              [decorative]="true"
+            />
+            <a
+              class="wishlist-drawer__name"
+              [routerLink]="['/product', product.slug]"
+              (click)="closeDrawer()"
+            >
+              {{ product.name }}
+            </a>
+            <span class="wishlist-drawer__price">{{ product.price | money }}</span>
+            <button
+              class="wishlist-drawer__remove"
+              type="button"
+              (click)="remove(product.id)"
+            >
+              Remove {{ product.name }}
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </aside>
+</div>

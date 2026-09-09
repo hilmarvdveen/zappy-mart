@@ -1,13 +1,13 @@
-<div class="container desktop-navbar__container desktop-only">
+<div class="container desktop-navbar__container">
   <div class="desktop-navbar__logo-link">
-    <a routerLink="/" aria-label="Logo en home knop">
-      <img src="assets/logo_zappy_mart.png" width="200" height="60" alt="Logo for my page" />
+    <a routerLink="/" aria-label="Zappy Mart home">
+      <img src="assets/logo_zappy_mart.png" width="200" height="60" alt="Zappy Mart" />
     </a>
   </div>
 
-  <nav class="desktop-navbar__nav">
+  <nav class="desktop-navbar__nav" aria-label="Main">
     <ul class="desktop-navbar__menu">
-      @for (link of menuLinks; track link) {
+      @for (link of menuLinks; track link.path) {
         <li class="desktop-navbar__menu-item" [attr.data-active]="link.isActive()">
           <a class="desktop-navbar__link" [routerLink]="link.path">
             {{ link.label }}
@@ -17,29 +17,42 @@
     </ul>
   </nav>
 
-  <button
-    class="desktop-navbar__check-wish-list"
-    aria-label="bekijk je favorieten"
-    (click)="openDrawer()"
-    [disabled]="count() === 0"
-  >
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke-width="2"
-      stroke="currentColor"
-      class="desktop-navbar__icon"
-    >
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"
-      />
-    </svg>
+  <div class="desktop-navbar__actions">
+    <a class="desktop-navbar__action" routerLink="/cart" [attr.aria-label]="cartLabel()">
+      Cart
+      @if (itemCount() > 0) {
+        <span class="cart-count-badge">{{ itemCount() }}</span>
+      }
+    </a>
 
-    @if (count() > 0) {
-      <span class="wishlist-count-badge">{{ count() }}</span>
-    }
-  </button>
+    <a class="desktop-navbar__action" routerLink="/account">Account</a>
+
+    <button
+      class="desktop-navbar__check-wish-list"
+      type="button"
+      [attr.aria-label]="wishlistLabel()"
+      (click)="openDrawer()"
+      [disabled]="count() === 0"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="2"
+        stroke="currentColor"
+        class="desktop-navbar__icon"
+        aria-hidden="true"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"
+        />
+      </svg>
+
+      @if (count() > 0) {
+        <span class="wishlist-count-badge">{{ count() }}</span>
+      }
+    </button>
+  </div>
 </div>

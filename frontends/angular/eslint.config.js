@@ -4,6 +4,9 @@ const tseslint = require('typescript-eslint');
 const angular = require('angular-eslint');
 module.exports = tseslint.config(
   {
+    ignores: ['src/app/api/generated/**'],
+  },
+  {
     files: ['**/*.ts'],
     extends: [
       eslint.configs.recommended,

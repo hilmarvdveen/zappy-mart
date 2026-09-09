@@ -1,0 +1,44 @@
+fragment ProductSummary on Product {
+  id
+  name
+  slug
+  price {
+    amount
+    currency
+  }
+  stock
+  imageUrl
+  category {
+    id
+    name
+    slug
+  }
+}
+
+query Catalogue($filter: ProductFilter, $first: Int, $after: String) {
+  categories {
+    id
+    name
+    slug
+  }
+  products(filter: $filter, first: $first, after: $after) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    edges {
+      cursor
+      node {
+        ...ProductSummary
+      }
+    }
+  }
+}
+
+query ProductBySlug($slug: String!) {
+  product(slug: $slug) {
+    ...ProductSummary
+    description
+  }
+}

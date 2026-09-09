@@ -1,0 +1,76 @@
+<section class="product container">
+  @if (loading()) {
+    <h1 class="product__heading">Product</h1>
+    <p class="product__status" role="status">Loading the product.</p>
+  } @else if (unreachable()) {
+    <h1 class="product__heading">Product</h1>
+    <p class="product__status" role="status">
+      The product could not be loaded. Start the mock server on port 4000 and try again.
+    </p>
+  } @else if (product(); as item) {
+    <nav class="product__breadcrumb" aria-label="Breadcrumb">
+      <a [routerLink]="['/']">Catalogue</a>
+      <span aria-hidden="true">/</span>
+      <a [routerLink]="['/']" [queryParams]="{ category: item.category.slug }">
+        {{ item.category.name }}
+      </a>
+    </nav>
+
+    <h1 class="product__heading">{{ item.name }}</h1>
+
+    <div class="product__body">
+      <app-product-image [imageUrl]="item.imageUrl" [name]="item.name" size="large" />
+
+      <div class="product__details">
+        <p class="product__price">{{ item.price | money }}</p>
+
+        @if (item.stock === 0) {
+          <p class="product__stock product__stock--empty">Out of stock</p>
+        } @else {
+          <p class="product__stock">{{ item.stock }} in stock</p>
+        }
+
+        <p class="product__description">{{ item.description }}</p>
+
+        <app-user-errors [errors]="errors()" [note]="note()" [problem]="problem()" />
+
+        @if (added()) {
+          <p class="product__added" role="status">Added to your cart.</p>
+        }
+
+        <div class="field">
+          <label class="field__label" for="product-quantity">Quantity</label>
+          <input
+            class="field__input product__quantity"
+            id="product-quantity"
+            name="quantity"
+            type="number"
+            min="1"
+            [max]="item.stock"
+            [value]="quantity()"
+            (input)="quantity.set(quantityOf($event))"
+          />
+        </div>
+
+        <div class="product__actions">
+          <button
+            class="button"
+            type="button"
+            [disabled]="item.stock === 0"
+            (click)="addToCart(item)"
+          >
+            Add to cart
+          </button>
+
+          <button class="button button--quiet" type="button" (click)="toggleWishlist(item)">
+            {{ saved(item) ? 'Remove from wishlist' : 'Save to wishlist' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  } @else {
+    <h1 class="product__heading">Product not found</h1>
+    <p class="product__status" role="status">No product in the catalogue has that address.</p>
+    <a class="button" [routerLink]="['/']">Back to the catalogue</a>
+  }
+</section>

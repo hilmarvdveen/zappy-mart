@@ -1,13 +1,39 @@
-<div class="card">
-  <img class="card__image" [src]="product.image" [alt]="product.title" />
-  <h3 class="card__title">{{ product.title }}</h3>
-  <p class="card__category">{{ product.category }}</p>
-  <p class="card__price">€{{ product.price }}</p>
-  <button
-    class="card__action-wish-list"
-    [class.card__action-wish-list--active]="inWishlist"
-    (click)="onToggleWishlist()"
-  >
-    {{ inWishlist ? 'Verwijder uit favorieten' : 'Voeg toe aan favorieten' }}
-  </button>
-</div>
+<article class="card">
+  <a class="card__link" [routerLink]="['/product', product().slug]">
+    <app-product-image
+      [imageUrl]="product().imageUrl"
+      [name]="product().name"
+      [decorative]="true"
+    />
+    <h3 class="card__title">{{ product().name }}</h3>
+  </a>
+
+  <p class="card__category">{{ product().category.name }}</p>
+  <p class="card__price">{{ product().price | money }}</p>
+
+  @if (product().stock === 0) {
+    <p class="card__stock card__stock--empty">Out of stock</p>
+  } @else {
+    <p class="card__stock">{{ product().stock }} in stock</p>
+  }
+
+  <div class="card__actions">
+    <button
+      class="card__action"
+      type="button"
+      [disabled]="product().stock === 0"
+      (click)="addToCart.emit(product())"
+    >
+      Add to cart
+    </button>
+
+    <button
+      class="card__action-wish-list"
+      [class.card__action-wish-list--active]="inWishlist()"
+      type="button"
+      (click)="toggleWishlist.emit(product())"
+    >
+      {{ inWishlist() ? 'Remove from wishlist' : 'Save to wishlist' }}
+    </button>
+  </div>
+</article>

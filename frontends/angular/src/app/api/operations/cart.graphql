@@ -1,0 +1,83 @@
+fragment CartDetail on Cart {
+  id
+  updatedAt
+  promotion {
+    code
+    kind
+    discount {
+      amount
+      currency
+    }
+  }
+  subtotal {
+    amount
+    currency
+  }
+  shipping {
+    amount
+    currency
+  }
+  total {
+    amount
+    currency
+  }
+  lines {
+    id
+    quantity
+    lineTotal {
+      amount
+      currency
+    }
+    product {
+      ...ProductSummary
+    }
+  }
+}
+
+fragment CartChange on CartPayload {
+  cart {
+    ...CartDetail
+  }
+  availableStock
+  errors {
+    code
+    message
+    field
+  }
+}
+
+query Cart {
+  cart {
+    ...CartDetail
+  }
+}
+
+mutation AddToCart($productId: ID!, $quantity: Int) {
+  addToCart(productId: $productId, quantity: $quantity) {
+    ...CartChange
+  }
+}
+
+mutation ChangeCartLineQuantity($lineId: ID!, $quantity: Int!) {
+  changeCartLineQuantity(lineId: $lineId, quantity: $quantity) {
+    ...CartChange
+  }
+}
+
+mutation RemoveCartLine($lineId: ID!) {
+  removeCartLine(lineId: $lineId) {
+    ...CartChange
+  }
+}
+
+mutation ApplyPromotionCode($code: String!) {
+  applyPromotionCode(code: $code) {
+    ...CartChange
+  }
+}
+
+mutation RemovePromotionCode {
+  removePromotionCode {
+    ...CartChange
+  }
+}
