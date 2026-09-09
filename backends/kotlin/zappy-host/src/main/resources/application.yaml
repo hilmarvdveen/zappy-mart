@@ -1,0 +1,77 @@
+spring:
+  application:
+    name: zappy-mart-kotlin
+  profiles:
+    default: development
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  datasource:
+    url: jdbc:h2:file:./build/database/zappy-mart;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE
+    driver-class-name: org.h2.Driver
+    username: zappy
+    password: zappy
+  graphql:
+    path: /graphql
+    graphiql:
+      enabled: true
+    schema:
+      inspection:
+        enabled: true
+
+server:
+  port: 8082
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+
+zappy:
+  security:
+    allowed-origins:
+      - http://localhost:5173
+      - http://localhost:3001
+      - http://localhost:4200
+    cookies-secure: true
+    graph-ql-path: /graphql
+
+logging:
+  level:
+    nl.zappymart: INFO
+
+---
+spring:
+  config:
+    activate:
+      on-profile: development
+  graphql:
+    schema:
+      locations:
+        - classpath:graphql/**/
+        - classpath:graphql-development/**/
+
+---
+spring:
+  config:
+    activate:
+      on-profile: postgres
+  datasource:
+    url: jdbc:postgresql://localhost:5432/zappymart
+    driver-class-name: org.postgresql.Driver
+    username: zappy
+    password: zappy
+  jpa:
+    hibernate:
+      ddl-auto: update

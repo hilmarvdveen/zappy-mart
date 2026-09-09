@@ -47,8 +47,8 @@ standalone components and the shared contract, and keeps its wishlist.
 conformance scenarios and the runner in `tools/conformance`, a mock
 server in `tools/mock-server` that passes all 33, the Angular product
 listing page upgraded to Angular 22, and the federation design for the
-Node backend. The Java monolith passes the runner, the C# and
-Kotlin monoliths and the federated graph are being built. The three store
+Node backend. The Java and Kotlin monoliths pass the runner, the
+C# monolith and the federated graph are being built. The three store
 fronts are done against the mock server, with the shared end to end suite
 in `tools/end-to-end`, which the Next.js and Angular fronts are being
 aligned to.

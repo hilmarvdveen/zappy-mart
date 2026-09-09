@@ -8,6 +8,7 @@ bin/
 obj/
 target/
 .gradle/
+.kotlin/
 *.log
 .env
 .env.local
