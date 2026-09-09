@@ -205,7 +205,7 @@ application, and the shared suites pass where they apply.
 | Z5 | The React Router frontend against the C# backend, end to end suite, README | Z3 | 8 | open |
 | Z6 | The Java backend, same modules, same tests, conformance green, README | Z2 | 10 | open |
 | Z7 | The Kotlin backend, same, README explaining what the language changes against Z6 | Z6 | 8 | open |
-| Z8 | The Next.js frontend, end to end green, README | Z3 | 8 | open |
+| Z8 | The Next.js frontend, end to end green, README | Z3 | 8 | done 9 September 2026 against the mock server: 61 tests, lint and build green, the whole flow verified in a browser, the shared end to end suite still to be pointed at it |
 | Z9 | The Angular frontend, grown from the existing app: Angular 19.2 to 22, modules to standalone components, zoneless change detection, the JSON catalogue replaced by the contract, the wishlist kept and moved into the schema, end to end green, README | Z3 | 8 | upgrade done 8 September 2026 (Angular 22.1.5, standalone, zoneless), the contract and the screens open |
 | Z10 | A REST facet on the C# backend: a second inbound adapter over the same use cases, so the hexagon proves itself and H17 has its example | Z3 | 4 | open, needs decision 6 |
 | Z11a | The Node backend as a federated graph: five subgraphs on Apollo Server with `@apollo/subgraph`, the composed supergraph on Apollo Router, the contract diff script, distributed authentication with a JWKS endpoint, conformance green against the router (`docs/federation.md`) | Z2 | 14 | open |

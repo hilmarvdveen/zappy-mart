@@ -48,7 +48,7 @@ conformance scenarios and the runner in `tools/conformance`, a mock
 server in `tools/mock-server` that passes all 33, the Angular product
 listing page upgraded to Angular 22, and the federation design for the
 Node backend. The three monoliths, the federated graph and the three
-store fronts are being built.
+store fronts are being built. The Next.js store front is done.
 
 ## Licence
 
