@@ -7,11 +7,13 @@ on:
       - "backends/kotlin/**"
       - "contract/**"
       - ".github/workflows/kotlin.yml"
+      - "tools/conformance/**"
   pull_request:
     paths:
       - "backends/kotlin/**"
       - "contract/**"
       - ".github/workflows/kotlin.yml"
+      - "tools/conformance/**"
 
 jobs:
   build-and-test:
@@ -31,3 +33,23 @@ jobs:
             backends/kotlin/**/*.gradle.kts
             backends/kotlin/gradle/wrapper/gradle-wrapper.properties
       - run: ./gradlew build --no-daemon
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: tools/conformance/package-lock.json
+      - run: npm ci
+        working-directory: tools/conformance
+      - name: Start the host and wait until it is ready
+        run: |
+          java -jar zappy-host/build/libs/zappy-mart-kotlin.jar > host.log 2>&1 &
+          for attempt in $(seq 1 90); do
+            if curl --silent --fail http://localhost:8082/actuator/health > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat host.log
+          exit 1
+      - run: node run.mjs --url http://localhost:8082/graphql
+        working-directory: tools/conformance

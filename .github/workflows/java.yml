@@ -7,11 +7,13 @@ on:
       - "backends/java/**"
       - "contract/**"
       - ".github/workflows/java.yml"
+      - "tools/conformance/**"
   pull_request:
     paths:
       - "backends/java/**"
       - "contract/**"
       - ".github/workflows/java.yml"
+      - "tools/conformance/**"
 
 jobs:
   build-and-test:
@@ -27,3 +29,23 @@ jobs:
           java-version: 25
           cache: maven
       - run: ./mvnw --batch-mode verify
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: tools/conformance/package-lock.json
+      - run: npm ci
+        working-directory: tools/conformance
+      - name: Start the host and wait until it is ready
+        run: |
+          java -jar zappy-host/target/zappy-host-1.0.0.jar > host.log 2>&1 &
+          for attempt in $(seq 1 90); do
+            if curl --silent --fail http://localhost:8081/actuator/health > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat host.log
+          exit 1
+      - run: node run.mjs --url http://localhost:8081/graphql
+        working-directory: tools/conformance
