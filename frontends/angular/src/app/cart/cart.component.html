@@ -1,5 +1,5 @@
 <section class="cart container">
-  <h1 class="cart__heading">Your cart</h1>
+  <h1 class="cart__heading">Cart</h1>
 
   <app-user-errors [errors]="errors()" [note]="note()" [problem]="problem()" />
 
@@ -42,18 +42,21 @@
             </th>
             <td>{{ line.product.price | money }}</td>
             <td>
-              <label class="cart__quantity-label" [for]="'cart-quantity-' + line.id">
-                Quantity of {{ line.product.name }}
-              </label>
-              <input
-                class="field__input cart__quantity"
-                [id]="'cart-quantity-' + line.id"
-                type="number"
-                min="1"
-                [max]="line.product.stock"
-                [value]="line.quantity"
-                (change)="changeQuantity(line.id, $event)"
-              />
+              <form class="cart__quantity-form" (submit)="updateQuantity(line.id, $event)">
+                <label class="cart__quantity-label" [for]="'cart-quantity-' + line.id">
+                  Quantity of {{ line.product.name }}
+                </label>
+                <input
+                  class="field__input cart__quantity"
+                  [id]="'cart-quantity-' + line.id"
+                  name="quantity"
+                  type="number"
+                  min="1"
+                  [max]="line.product.stock"
+                  [value]="line.quantity"
+                />
+                <button class="button button--quiet" type="submit">Update</button>
+              </form>
             </td>
             <td>{{ line.lineTotal | money }}</td>
             <td>
@@ -66,21 +69,6 @@
       </tbody>
     </table>
 
-    <form class="cart__promotion" aria-label="Promotion code" (submit)="applyPromotionCode($event)">
-      <label class="field__label" for="cart-promotion-code">Promotion code</label>
-      <div class="cart__promotion-row">
-        <input
-          class="field__input"
-          id="cart-promotion-code"
-          name="promotionCode"
-          type="text"
-          [value]="promotionCode()"
-          (input)="promotionCode.set(valueOf($event))"
-        />
-        <button class="button" type="submit">Apply</button>
-      </div>
-    </form>
-
     @if (cart(); as currentCart) {
       <dl class="cart__summary">
         <dt>Subtotal</dt>
@@ -88,12 +76,7 @@
 
         @if (currentCart.promotion; as promotion) {
           <dt>Promotion {{ promotion.code }}</dt>
-          <dd>
-            {{ promotion.discount | money }}
-            <button class="button button--quiet" type="button" (click)="removePromotionCode()">
-              Remove promotion code
-            </button>
-          </dd>
+          <dd>{{ promotion.discount | money }}</dd>
         }
 
         <dt>Shipping</dt>

@@ -21,6 +21,18 @@
     }
   }
 
+  &__in-stock {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+
+    label {
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+  }
+
   &__filter-action {
     height: 2.5rem;
   }

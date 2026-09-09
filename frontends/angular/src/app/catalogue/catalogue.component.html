@@ -31,6 +31,17 @@
       </select>
     </div>
 
+    <div class="field catalogue__in-stock">
+      <input
+        id="catalogue-in-stock-only"
+        name="stock"
+        type="checkbox"
+        [checked]="inStockOnly()"
+        (change)="inStockOnly.set(checkedOf($event))"
+      />
+      <label for="catalogue-in-stock-only">In stock only</label>
+    </div>
+
     <button class="button catalogue__filter-action" type="submit">Filter</button>
   </form>
 

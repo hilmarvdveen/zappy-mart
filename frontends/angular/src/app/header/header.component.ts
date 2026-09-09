@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { isActive, Router, RouterLink } from '@angular/router';
 import { WishlistService } from '../../shared/services/wishlist.service';
+import { SessionService } from '../account/session.service';
 import { CartService } from '../cart/cart.service';
 import { WishlistDrawerService } from '../wishlist-drawer/wishlist-drawer.service';
 
@@ -16,11 +17,12 @@ export default class HeaderComponent {
 
   readonly count = inject(WishlistService).count;
   readonly itemCount = inject(CartService).itemCount;
+  readonly signedIn = inject(SessionService).signedIn;
 
   readonly cartLabel = computed(
     () => `Cart, ${this.itemCount()} ${this.itemCount() === 1 ? 'item' : 'items'}`
   );
-  readonly wishlistLabel = computed(() => `Wishlist, ${this.count()}`);
+  readonly wishlistLabel = computed(() => `Wishlist, ${this.count()} saved`);
 
   readonly menuLinks = [
     { path: '/', label: 'Catalogue' },

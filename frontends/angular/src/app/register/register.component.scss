@@ -1,0 +1,19 @@
+.register {
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+
+  &__heading {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  &__alternative {
+    margin-top: 1rem;
+    color: #4b5563;
+
+    a {
+      text-decoration: underline;
+    }
+  }
+}

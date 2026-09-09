@@ -2,8 +2,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
-import { byRole, queryByRole } from '../../testing/roles';
+import { provideRouter, Router } from '@angular/router';
+import { byRole, allByRole, queryByRole } from '../../testing/roles';
 import { GRAPHQL_URL } from '../api/graphql-url';
 import { AccountComponent } from './account.component';
 import { SessionService } from './session.service';
@@ -115,8 +115,19 @@ describe('AccountComponent', () => {
     expect(byRole(page, 'heading', 'Your account')).toBeTruthy();
     expect(byRole(page, 'heading', 'Order history')).toBeTruthy();
     expect(byRole(page, 'rowheader', 'ZM-2026-0001')).toBeTruthy();
-    expect(byRole(page, 'heading', 'Your sessions')).toBeTruthy();
-    expect(byRole(page, 'listitem', /Chrome on Windows/)).toBeTruthy();
+    const openSessions = byRole(page, 'region', 'Open sessions');
+    expect(allByRole(openSessions, 'listitem').length).toBe(2);
+    expect(byRole(openSessions, 'listitem', /Chrome on Windows/).textContent).toContain(
+      '(this device)'
+    );
+  });
+
+  it('offers a revoke button on every session but the current one', async () => {
+    await render();
+    const openSessions = byRole(fixture.nativeElement as HTMLElement, 'region', 'Open sessions');
+
+    expect(allByRole(openSessions, 'button').length).toBe(1);
+    expect(queryByRole(openSessions, 'button', 'Revoke Chrome on Windows')).toBeNull();
   });
 
   it('revokes one session', async () => {
@@ -128,13 +139,14 @@ describe('AccountComponent', () => {
     expect(revokeSession).toHaveBeenCalledWith('session-2');
   });
 
-  it('asks an anonymous visitor to log in', async () => {
-    signedIn.set(false);
+  it('sends the customer to the login screen after logging out', async () => {
     await render();
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
 
-    const page = fixture.nativeElement as HTMLElement;
+    byRole(fixture.nativeElement as HTMLElement, 'button', 'Log out').click();
+    await fixture.whenStable();
 
-    expect(byRole(page, 'form', 'Log in')).toBeTruthy();
-    expect(queryByRole(page, 'heading', 'Order history')).toBeNull();
+    expect(logOut).toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith(['/login']);
   });
 });

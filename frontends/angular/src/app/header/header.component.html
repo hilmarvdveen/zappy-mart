@@ -25,7 +25,11 @@
       }
     </a>
 
-    <a class="desktop-navbar__action" routerLink="/account">Account</a>
+    @if (signedIn()) {
+      <a class="desktop-navbar__action" routerLink="/account">Account</a>
+    } @else {
+      <a class="desktop-navbar__action" routerLink="/login">Log in</a>
+    }
 
     <button
       class="desktop-navbar__check-wish-list"

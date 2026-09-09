@@ -87,6 +87,10 @@ describe('CatalogueComponent', () => {
     expect(byRole(page, 'heading', 'Mens Cotton Jacket')).toBeTruthy();
   });
 
+  it('offers an in stock only checkbox', () => {
+    expect(byRole(fixture.nativeElement as HTMLElement, 'checkbox', 'In stock only')).toBeTruthy();
+  });
+
   it('puts the search term and the category in the url when the filter is submitted', () => {
     const page = fixture.nativeElement as HTMLElement;
     const navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
@@ -100,7 +104,7 @@ describe('CatalogueComponent', () => {
     byRole(page, 'button', 'Filter').click();
 
     expect(navigate).toHaveBeenCalledWith(['/'], {
-      queryParams: { category: 'mens-clothing', search: 'jacket' },
+      queryParams: { category: 'mens-clothing', search: 'jacket', stock: null },
     });
   });
 

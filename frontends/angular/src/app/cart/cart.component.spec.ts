@@ -40,8 +40,6 @@ describe('CartComponent', () => {
     cart: ReturnType<typeof signal<typeof filledCart | null>>;
     changeLineQuantity: jest.Mock;
     removeLine: jest.Mock;
-    applyPromotionCode: jest.Mock;
-    removePromotionCode: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -54,9 +52,7 @@ describe('CartComponent', () => {
       cart,
       changeLineQuantity: jest.fn().mockResolvedValue(noChange),
       removeLine: jest.fn().mockResolvedValue(noChange),
-      applyPromotionCode: jest.fn().mockResolvedValue(noChange),
-      removePromotionCode: jest.fn().mockResolvedValue(noChange),
-    };
+        };
 
     await TestBed.configureTestingModule({
       providers: [
@@ -82,19 +78,21 @@ describe('CartComponent', () => {
   it('lists the lines of the cart with the totals', () => {
     const page = fixture.nativeElement as HTMLElement;
 
-    expect(byRole(page, 'heading', 'Your cart')).toBeTruthy();
+    expect(byRole(page, 'heading', 'Cart')).toBeTruthy();
     expect(byRole(page, 'table')).toBeTruthy();
     expect(byRole(page, 'rowheader', /Mens Cotton Jacket/)).toBeTruthy();
+    expect(byRole(page, 'link', 'Go to checkout')).toBeTruthy();
     expect(allByRole(page, 'cell').some((cell) => cell.textContent?.includes('€111.98'))).toBe(
       true
     );
   });
 
-  it('changes the quantity of a line', async () => {
-    const quantity = byRole(fixture.nativeElement as HTMLElement, 'spinbutton') as HTMLInputElement;
+  it('changes the quantity of a line when its update button is used', async () => {
+    const page = fixture.nativeElement as HTMLElement;
+    const quantity = byRole(page, 'spinbutton') as HTMLInputElement;
 
     quantity.value = '3';
-    quantity.dispatchEvent(new Event('change'));
+    byRole(page, 'button', 'Update').click();
     await fixture.whenStable();
 
     expect(cartService.changeLineQuantity).toHaveBeenCalledWith('line-1', 3);
@@ -105,18 +103,6 @@ describe('CartComponent', () => {
     await fixture.whenStable();
 
     expect(cartService.removeLine).toHaveBeenCalledWith('line-1');
-  });
-
-  it('applies a promotion code', async () => {
-    const page = fixture.nativeElement as HTMLElement;
-    const code = byRole(page, 'textbox') as HTMLInputElement;
-
-    code.value = 'WELCOME10';
-    code.dispatchEvent(new Event('input'));
-    byRole(page, 'button', 'Apply').click();
-    await fixture.whenStable();
-
-    expect(cartService.applyPromotionCode).toHaveBeenCalledWith('WELCOME10');
   });
 
   it('says the cart is empty when it has no lines', () => {

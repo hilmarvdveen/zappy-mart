@@ -33,6 +33,22 @@
     color: #4b5563;
   }
 
+  &__promotion {
+    margin-bottom: 1rem;
+  }
+
+  &__promotion-row {
+    display: flex;
+    gap: 0.5rem;
+    max-width: 26rem;
+  }
+
+  &__promotion-applied {
+    margin-bottom: 1rem;
+    color: #047857;
+    font-weight: 600;
+  }
+
   &__summary {
     display: grid;
     grid-template-columns: minmax(0, 12rem) minmax(0, 1fr);

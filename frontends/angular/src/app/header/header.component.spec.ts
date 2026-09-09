@@ -3,6 +3,7 @@ import HeaderComponent from './header.component';
 import { WishlistDrawerService } from '../wishlist-drawer/wishlist-drawer.service';
 import { WishlistService } from '../../shared/services/wishlist.service';
 import { CartService } from '../cart/cart.service';
+import { SessionService } from '../account/session.service';
 import { Component, signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
@@ -12,6 +13,7 @@ describe('HeaderComponent', () => {
   let mockDrawerService: Partial<WishlistDrawerService>;
   let mockWishlistService: Partial<WishlistService>;
   let mockCartService: Partial<CartService>;
+  let signedIn: ReturnType<typeof signal<boolean>>;
 
   beforeEach(async () => {
     mockDrawerService = {
@@ -26,6 +28,8 @@ describe('HeaderComponent', () => {
       itemCount: signal(2),
     };
 
+    signedIn = signal(false);
+
     await TestBed.configureTestingModule({
       imports: [HeaderComponent],
       providers: [
@@ -33,6 +37,7 @@ describe('HeaderComponent', () => {
         { provide: WishlistDrawerService, useValue: mockDrawerService },
         { provide: WishlistService, useValue: mockWishlistService },
         { provide: CartService, useValue: mockCartService },
+        { provide: SessionService, useValue: { signedIn } },
       ],
     }).compileComponents();
 
@@ -64,6 +69,24 @@ describe('HeaderComponent', () => {
   it('should display the number of items in the cart', () => {
     const badge = fixture.debugElement.query(By.css('.cart-count-badge'));
     expect(badge.nativeElement.textContent).toContain('2');
+  });
+
+  it('should name the cart and the wishlist with their counts', () => {
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(page.querySelector('[aria-label="Cart, 2 items"]')).toBeTruthy();
+    expect(page.querySelector('[aria-label="Wishlist, 3 saved"]')).toBeTruthy();
+  });
+
+  it('should offer a log in link while nobody is signed in and an account link after', () => {
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.textContent).toContain('Log in');
+
+    signedIn.set(true);
+    fixture.detectChanges();
+
+    expect(page.textContent).toContain('Account');
+    expect(page.textContent).not.toContain('Log in');
   });
 
   it('should call openDrawer when heart button is clicked', () => {

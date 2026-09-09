@@ -29,7 +29,7 @@ had 37 tests. Item Z9 of `BACKLOG.md` grows it into the store front of section 7
 The two spec files that only existed to prove the JSON catalogue was read are gone with
 the JSON: `product-api.service.spec.ts` and `product-signal-store.service.spec.ts`,
 together with the `Product` model they typed, eight tests in all. Every other test was
-kept and moved with its subject, and the count went from 37 to 99.
+kept and moved with its subject, and the count went from 37 to 112.
 
 ## Running it
 
@@ -71,13 +71,13 @@ endpoint changes and nothing else does.
 |---|---|---|
 | `/` | catalogue | The whole catalogue, paged. The category filter and the search term live in the url as `?category=` and `?search=`, so a filtered catalogue is a link a visitor can share and a back button walks through the filters. Every card adds to the cart and saves to the wishlist. |
 | `/product/:slug` | product | One product by its slug, with the description, the price, the stock and a quantity to add. A refusal is shown as the contract sends it, so a quantity above the stock says how many are left. |
-| `/cart` | cart | The lines with a quantity to change and a button to remove, a promotion code to apply and to take off, and the four amounts of the contract: subtotal, shipping, discount and total. |
-| `/checkout` | checkout | The order to be placed. An order belongs to a customer, so an anonymous visitor gets the login form here instead. Placing the order sends one idempotency key that survives a reload, so a retry after a lost answer places no second order. |
+| `/cart` | cart | The lines, each a small form with a quantity and an Update button, a button to remove the line, and the amounts of the contract: subtotal, the promotion when one applies, shipping and total. |
+| `/checkout` | checkout | The order to be placed, the promotion code to apply, and the button that places it. An order belongs to a customer, so `signedInGuard` sends an anonymous visitor to `/login?returnTo=/checkout` and back again. Placing the order sends one idempotency key that survives a reload, so a retry after a lost answer places no second order. |
 | `/orders/:orderId` | order confirmation | The placed order with its number, its status, the names and prices of the moment, and the totals it was paid at. |
-| `/account` | account | The customer, the order history and every open session with the device and the times, each with a button to revoke it. Revoking the session the visitor is on ends it at once. Signed out, this screen is the login and registration form. |
+| `/account` | account | The customer, the order history and an Open sessions panel with one entry per session, the current one marked and every other one revocable. It is behind `signedInGuard`, so a visitor without a session lands on `/login`. |
 
-Two more routes carry the rest: `/about` is the about page, and anything else redirects
-to the catalogue.
+Three more routes carry the rest: `/login` and `/register` are the two authentication
+screens, `/about` is the about page, and anything else redirects to the catalogue.
 
 ## The shape of the data layer
 
@@ -152,8 +152,8 @@ calls the API directly, with the access token in memory only.
   request to the API.
 - **A reload restores the session.** `provideAppInitializer` runs one `refreshSession`
   before the first screen renders, so a visitor who reloads is still logged in and the
-  first cart read already carries the new token. An anonymous visitor pays one failed
-  request for it, which is the price of keeping the token out of storage.
+  first cart read already carries the new token. It runs only when the `zappy_session`
+  marker says this browser has a session open, so a first visit pays nothing for it.
 - **The interceptor refreshes twice over.** Before it sends a token that is within half a
   minute of its expiry, and again when the API answers 401. Both go through
   `SessionRefresher`, which keeps one refresh in flight at a time, so ten screens that
@@ -215,6 +215,7 @@ frontends/angular/
       order-confirmation/             the order confirmation screen
       account/                        the account screen and the session service
       about/                          the about page
+      login/, register/               the two authentication screens
       header/                         the top bar
       wishlist-drawer/                the drawer and its open or closed signal
       app.component.*                 the shell: the header, the outlet and the drawer
@@ -1338,6 +1339,17 @@ export function inputValueOf(event: Event): string {
 export function numberValueOf(event: Event): number {
   return Number.parseInt(inputValueOf(event), 10);
 }
+
+export function checkedValueOf(event: Event): boolean {
+  return (event.target as HTMLInputElement).checked;
+}
+
+export function numberFieldOf(event: Event, fieldName: string): number {
+  const form = event.target as HTMLFormElement;
+  const field = form.elements.namedItem(fieldName) as HTMLInputElement;
+
+  return Number.parseInt(field.value, 10);
+}
 ```
 
 ### `src/shared/services/local-storage.service.ts`
@@ -1614,12 +1626,15 @@ export class UserErrorsComponent {
 One form for logging in and for registering, used by the account screen and by the checkout screen, so the copy and the rules exist once.
 
 ```ts
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
+import { Router } from '@angular/router';
+import { SessionService } from '../../../app/account/session.service';
 import { attempt } from '../../../app/api/attempt';
 import { UserError } from '../../../app/api/user-error';
-import { SessionService } from '../../../app/account/session.service';
 import { inputValueOf } from '../../input-value';
 import { UserErrorsComponent } from '../user-errors/user-errors.component';
+
+export type LoginFormMode = 'login' | 'register';
 
 @Component({
   selector: 'app-login-form',
@@ -1629,21 +1644,20 @@ import { UserErrorsComponent } from '../user-errors/user-errors.component';
 })
 export class LoginFormComponent {
   private readonly sessionService = inject(SessionService);
+  private readonly router = inject(Router);
+
+  readonly mode = input<LoginFormMode>('login');
+  readonly returnTo = input<string | null>(null);
 
   protected readonly valueOf = inputValueOf;
-  protected readonly registering = signal(false);
+  protected readonly registering = computed(() => this.mode() === 'register');
+  protected readonly action = computed(() => (this.registering() ? 'Register' : 'Log in'));
   protected readonly name = signal('');
   protected readonly email = signal('');
   protected readonly password = signal('');
   protected readonly busy = signal(false);
   protected readonly errors = signal<UserError[]>([]);
   protected readonly problem = signal<string | null>(null);
-
-  protected switchMode(): void {
-    this.registering.update((registering) => !registering);
-    this.errors.set([]);
-    this.problem.set(null);
-  }
 
   protected async submit(event: Event): Promise<void> {
     event.preventDefault();
@@ -1653,6 +1667,10 @@ export class LoginFormComponent {
 
     this.busy.set(false);
     this.errors.set(answered ?? []);
+
+    if (answered !== null && answered.length === 0) {
+      await this.router.navigateByUrl(this.returnTo() ?? '/account');
+    }
   }
 
   private authenticate(): Promise<UserError[]> {
@@ -1674,15 +1692,7 @@ export class LoginFormComponent {
 
 
 ```html
-<form
-  class="login-form"
-  [attr.aria-label]="registering() ? 'Create an account' : 'Log in'"
-  (submit)="submit($event)"
->
-  <h2 class="login-form__heading">
-    {{ registering() ? 'Create an account' : 'Log in' }}
-  </h2>
-
+<form class="login-form" [attr.aria-label]="action()" (submit)="submit($event)">
   <app-user-errors [errors]="errors()" [problem]="problem()" />
 
   @if (registering()) {
@@ -1732,13 +1742,7 @@ export class LoginFormComponent {
     }
   </div>
 
-  <button class="button" type="submit" [disabled]="busy()">
-    {{ registering() ? 'Create account' : 'Log in' }}
-  </button>
-
-  <button class="login-form__switch" type="button" (click)="switchMode()">
-    {{ registering() ? 'I already have an account' : 'I do not have an account yet' }}
-  </button>
+  <button class="button" type="submit" [disabled]="busy()">{{ action() }}</button>
 </form>
 ```
 
@@ -1957,7 +1961,7 @@ import { Component, computed, inject, input, linkedSignal, signal } from '@angul
 import { Router } from '@angular/router';
 import ProductCardComponent from '../../shared/components/product-card/product-card.component';
 import { UserErrorsComponent } from '../../shared/components/user-errors/user-errors.component';
-import { inputValueOf } from '../../shared/input-value';
+import { checkedValueOf, inputValueOf } from '../../shared/input-value';
 import { WishlistService } from '../../shared/services/wishlist.service';
 import { attempt } from '../api/attempt';
 import { CatalogueDocument, ProductSummaryFragment } from '../api/generated/contract';
@@ -1982,10 +1986,13 @@ export class CatalogueComponent {
 
   readonly category = input('');
   readonly search = input('');
+  readonly stock = input('');
 
   protected readonly valueOf = inputValueOf;
+  protected readonly checkedOf = checkedValueOf;
   protected readonly searchTerm = linkedSignal(() => this.search());
   protected readonly chosenCategory = linkedSignal(() => this.category());
+  protected readonly inStockOnly = linkedSignal(() => this.stock() === 'available');
   protected readonly pageSize = signal(cataloguePageSize);
   protected readonly errors = signal<UserError[]>([]);
   protected readonly note = signal<string | null>(null);
@@ -1995,6 +2002,7 @@ export class CatalogueComponent {
     filter: {
       categorySlug: this.category() === '' ? null : this.category(),
       nameContains: this.search() === '' ? null : this.search(),
+      inStockOnly: this.stock() === 'available',
     },
     first: this.pageSize(),
   }));
@@ -2022,6 +2030,7 @@ export class CatalogueComponent {
       queryParams: {
         category: this.chosenCategory() === '' ? null : this.chosenCategory(),
         search: this.searchTerm() === '' ? null : this.searchTerm(),
+        stock: this.inStockOnly() ? 'available' : null,
       },
     });
   }
@@ -2081,6 +2090,17 @@ export class CatalogueComponent {
       </select>
     </div>
 
+    <div class="field catalogue__in-stock">
+      <input
+        id="catalogue-in-stock-only"
+        name="stock"
+        type="checkbox"
+        [checked]="inStockOnly()"
+        (change)="inStockOnly.set(checkedOf($event))"
+      />
+      <label for="catalogue-in-stock-only">In stock only</label>
+    </div>
+
     <button class="button catalogue__filter-action" type="submit">Filter</button>
   </form>
 
@@ -2138,6 +2158,18 @@ export class CatalogueComponent {
     .field {
       margin-bottom: 0;
       min-width: 14rem;
+    }
+  }
+
+  &__in-stock {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+
+    label {
+      font-weight: 600;
+      font-size: 0.875rem;
     }
   }
 
@@ -2542,7 +2574,7 @@ import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ProductImageComponent } from '../../shared/components/product-image/product-image.component';
 import { UserErrorsComponent } from '../../shared/components/user-errors/user-errors.component';
-import { inputValueOf, numberValueOf } from '../../shared/input-value';
+import { numberFieldOf } from '../../shared/input-value';
 import { MoneyPipe } from '../../shared/money.pipe';
 import { attempt } from '../api/attempt';
 import { CartChangeFragment } from '../api/generated/contract';
@@ -2559,9 +2591,6 @@ import { stockNote } from './stock-note';
 export class CartComponent {
   private readonly cartService = inject(CartService);
 
-  protected readonly valueOf = inputValueOf;
-  protected readonly quantityOf = numberValueOf;
-  protected readonly promotionCode = signal('');
   protected readonly errors = signal<UserError[]>([]);
   protected readonly note = signal<string | null>(null);
   protected readonly problem = signal<string | null>(null);
@@ -2573,8 +2602,10 @@ export class CartComponent {
   protected readonly empty = this.cartService.empty;
   protected readonly itemCount = this.cartService.itemCount;
 
-  protected async changeQuantity(lineId: string, event: Event): Promise<void> {
-    const quantity = numberValueOf(event);
+  protected async updateQuantity(lineId: string, event: Event): Promise<void> {
+    event.preventDefault();
+    const quantity = numberFieldOf(event, 'quantity');
+
     this.record(
       await attempt(() => this.cartService.changeLineQuantity(lineId, quantity), this.problem)
     );
@@ -2582,18 +2613,6 @@ export class CartComponent {
 
   protected async removeLine(lineId: string): Promise<void> {
     this.record(await attempt(() => this.cartService.removeLine(lineId), this.problem));
-  }
-
-  protected async applyPromotionCode(event: Event): Promise<void> {
-    event.preventDefault();
-    this.record(
-      await attempt(() => this.cartService.applyPromotionCode(this.promotionCode()), this.problem)
-    );
-  }
-
-  protected async removePromotionCode(): Promise<void> {
-    this.promotionCode.set('');
-    this.record(await attempt(() => this.cartService.removePromotionCode(), this.problem));
   }
 
   private record(change: CartChangeFragment | null): void {
@@ -2609,7 +2628,7 @@ export class CartComponent {
 
 ```html
 <section class="cart container">
-  <h1 class="cart__heading">Your cart</h1>
+  <h1 class="cart__heading">Cart</h1>
 
   <app-user-errors [errors]="errors()" [note]="note()" [problem]="problem()" />
 
@@ -2652,18 +2671,21 @@ export class CartComponent {
             </th>
             <td>{{ line.product.price | money }}</td>
             <td>
-              <label class="cart__quantity-label" [for]="'cart-quantity-' + line.id">
-                Quantity of {{ line.product.name }}
-              </label>
-              <input
-                class="field__input cart__quantity"
-                [id]="'cart-quantity-' + line.id"
-                type="number"
-                min="1"
-                [max]="line.product.stock"
-                [value]="line.quantity"
-                (change)="changeQuantity(line.id, $event)"
-              />
+              <form class="cart__quantity-form" (submit)="updateQuantity(line.id, $event)">
+                <label class="cart__quantity-label" [for]="'cart-quantity-' + line.id">
+                  Quantity of {{ line.product.name }}
+                </label>
+                <input
+                  class="field__input cart__quantity"
+                  [id]="'cart-quantity-' + line.id"
+                  name="quantity"
+                  type="number"
+                  min="1"
+                  [max]="line.product.stock"
+                  [value]="line.quantity"
+                />
+                <button class="button button--quiet" type="submit">Update</button>
+              </form>
             </td>
             <td>{{ line.lineTotal | money }}</td>
             <td>
@@ -2676,21 +2698,6 @@ export class CartComponent {
       </tbody>
     </table>
 
-    <form class="cart__promotion" aria-label="Promotion code" (submit)="applyPromotionCode($event)">
-      <label class="field__label" for="cart-promotion-code">Promotion code</label>
-      <div class="cart__promotion-row">
-        <input
-          class="field__input"
-          id="cart-promotion-code"
-          name="promotionCode"
-          type="text"
-          [value]="promotionCode()"
-          (input)="promotionCode.set(valueOf($event))"
-        />
-        <button class="button" type="submit">Apply</button>
-      </div>
-    </form>
-
     @if (cart(); as currentCart) {
       <dl class="cart__summary">
         <dt>Subtotal</dt>
@@ -2698,12 +2705,7 @@ export class CartComponent {
 
         @if (currentCart.promotion; as promotion) {
           <dt>Promotion {{ promotion.code }}</dt>
-          <dd>
-            {{ promotion.discount | money }}
-            <button class="button button--quiet" type="button" (click)="removePromotionCode()">
-              Remove promotion code
-            </button>
-          </dd>
+          <dd>{{ promotion.discount | money }}</dd>
         }
 
         <dt>Shipping</dt>
@@ -2783,14 +2785,10 @@ export class CartComponent {
     max-width: 5rem;
   }
 
-  &__promotion {
-    margin-bottom: 1.5rem;
-  }
-
-  &__promotion-row {
+  &__quantity-form {
     display: flex;
+    align-items: center;
     gap: 0.5rem;
-    max-width: 26rem;
   }
 
   &__summary {
@@ -2915,8 +2913,8 @@ export class OrderService {
 ```ts
 import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { LoginFormComponent } from '../../shared/components/login-form/login-form.component';
 import { UserErrorsComponent } from '../../shared/components/user-errors/user-errors.component';
+import { inputValueOf } from '../../shared/input-value';
 import { MoneyPipe } from '../../shared/money.pipe';
 import { SessionService } from '../account/session.service';
 import { attempt } from '../api/attempt';
@@ -2929,7 +2927,7 @@ import { OrderService } from './order.service';
   selector: 'app-checkout',
   templateUrl: './checkout.component.html',
   styleUrl: './checkout.component.scss',
-  imports: [RouterLink, MoneyPipe, LoginFormComponent, UserErrorsComponent],
+  imports: [RouterLink, MoneyPipe, UserErrorsComponent],
 })
 export class CheckoutComponent {
   private readonly router = inject(Router);
@@ -2938,15 +2936,27 @@ export class CheckoutComponent {
   private readonly orderService = inject(OrderService);
   private readonly checkoutAttempt = inject(CheckoutAttempt);
 
-  protected readonly signedIn = this.sessionService.signedIn;
+  protected readonly valueOf = inputValueOf;
   protected readonly customer = this.sessionService.customer;
   protected readonly cart = this.cartService.cart;
   protected readonly lines = this.cartService.lines;
   protected readonly empty = this.cartService.empty;
 
+  protected readonly promotionCode = signal('');
   protected readonly placing = signal(false);
   protected readonly errors = signal<UserError[]>([]);
   protected readonly problem = signal<string | null>(null);
+
+  protected async applyPromotionCode(event: Event): Promise<void> {
+    event.preventDefault();
+
+    const change = await attempt(
+      () => this.cartService.applyPromotionCode(this.promotionCode()),
+      this.problem
+    );
+
+    this.errors.set(change?.errors ?? []);
+  }
 
   protected async placeOrder(): Promise<void> {
     this.placing.set(true);
@@ -2977,19 +2987,12 @@ export class CheckoutComponent {
 
   <app-user-errors [errors]="errors()" [problem]="problem()" />
 
-  @if (!signedIn()) {
-    <p class="checkout__status" role="status">
-      An order belongs to a customer, so please log in or create an account to place it.
-    </p>
-    <app-login-form />
-  } @else if (empty()) {
+  @if (empty()) {
     <p class="checkout__status" role="status">Your cart is empty, so there is nothing to order.</p>
     <a class="button" [routerLink]="['/']">Back to the catalogue</a>
   } @else {
     @if (customer(); as signedInCustomer) {
-      <p class="checkout__status" role="status">
-        Ordering as {{ signedInCustomer.name }} ({{ signedInCustomer.email }}).
-      </p>
+      <p class="checkout__status">{{ signedInCustomer.name }}, check your order and place it.</p>
     }
 
     <table class="checkout__table">
@@ -3014,15 +3017,35 @@ export class CheckoutComponent {
       </tbody>
     </table>
 
+    <form
+      class="checkout__promotion"
+      aria-label="Promotion code"
+      (submit)="applyPromotionCode($event)"
+    >
+      <label class="field__label" for="checkout-promotion-code">Promotion code</label>
+      <div class="checkout__promotion-row">
+        <input
+          class="field__input"
+          id="checkout-promotion-code"
+          name="promotionCode"
+          type="text"
+          [value]="promotionCode()"
+          (input)="promotionCode.set(valueOf($event))"
+        />
+        <button class="button" type="submit">Apply code</button>
+      </div>
+    </form>
+
     @if (cart(); as currentCart) {
+      @if (currentCart.promotion; as promotion) {
+        <p class="checkout__promotion-applied">
+          {{ promotion.code }} takes off {{ promotion.discount | money }}.
+        </p>
+      }
+
       <dl class="checkout__summary">
         <dt>Subtotal</dt>
         <dd>{{ currentCart.subtotal | money }}</dd>
-
-        @if (currentCart.promotion; as promotion) {
-          <dt>Promotion {{ promotion.code }}</dt>
-          <dd>{{ promotion.discount | money }}</dd>
-        }
 
         <dt>Shipping</dt>
         <dd>{{ currentCart.shipping | money }}</dd>
@@ -3081,6 +3104,22 @@ export class CheckoutComponent {
     text-align: left;
     padding-bottom: 0.5rem;
     color: #4b5563;
+  }
+
+  &__promotion {
+    margin-bottom: 1rem;
+  }
+
+  &__promotion-row {
+    display: flex;
+    gap: 0.5rem;
+    max-width: 26rem;
+  }
+
+  &__promotion-applied {
+    margin-bottom: 1rem;
+    color: #047857;
+    font-weight: 600;
   }
 
   &__summary {
@@ -3202,7 +3241,10 @@ export class OrderConfirmationComponent {
       <dd>{{ placedOrder.subtotal | money }}</dd>
 
       @if (placedOrder.promotionCode !== null) {
-        <dt>Promotion {{ placedOrder.promotionCode }}</dt>
+        <dt>Promotion code</dt>
+        <dd>{{ placedOrder.promotionCode }}</dd>
+
+        <dt>Discount</dt>
         <dd>{{ placedOrder.discount | money }}</dd>
       }
 
@@ -3293,12 +3335,64 @@ export class OrderConfirmationComponent {
 
 ## The account
 
+### `src/app/account/session-marker.ts`
+
+The browser's own note that it has a session open. It holds the word `open` and nothing else, and it is the reason a first visit makes no refresh request and a visitor whose session was ended somewhere else is told so.
+
+```ts
+import { DOCUMENT, inject, Injectable } from '@angular/core';
+
+const cookieName = 'zappy_session';
+
+@Injectable({ providedIn: 'root' })
+export class SessionMarker {
+  private readonly document = inject(DOCUMENT);
+
+  present(): boolean {
+    return this.document.cookie
+      .split(';')
+      .some((entry) => entry.trim().startsWith(`${cookieName}=`));
+  }
+
+  remember(): void {
+    this.write('open', 'max-age=2592000');
+  }
+
+  forget(): void {
+    this.write('', 'max-age=0');
+  }
+
+  private write(value: string, lifetime: string): void {
+    const secure = this.document.location.protocol === 'https:' ? '; secure' : '';
+    this.document.cookie = `${cookieName}=${value}; path=/; samesite=lax; ${lifetime}${secure}`;
+  }
+}
+```
+
+### `src/app/account/signed-in.guard.ts`
+
+The checkout, the confirmation and the account belong to a customer. A visitor without a session is sent to `/login` with the way back in the url.
+
+```ts
+import { inject } from '@angular/core';
+import { CanActivateFn, Router } from '@angular/router';
+import { SessionService } from './session.service';
+
+export const signedInGuard: CanActivateFn = (route, state) => {
+  if (inject(SessionService).signedIn()) {
+    return true;
+  }
+
+  return inject(Router).createUrlTree(['/login'], { queryParams: { returnTo: state.url } });
+};
+```
+
 ### `src/app/account/session.service.ts`
 
 Registration, login, logout, revoking a session and the customer read. Revoking the session the request is made from is allowed, and the answer says so by no longer carrying a current session, which is when the application throws its token away and empties the Apollo cache.
 
 ```ts
-import { computed, inject, Injectable } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { Apollo } from 'apollo-angular';
 import { firstValueFrom } from 'rxjs';
 import { AccessTokenStore } from '../api/access-token-store';
@@ -3323,24 +3417,38 @@ import {
 import { graphqlResource } from '../api/graphql-resource';
 import { SessionRefresher } from '../api/session-refresher';
 import { UserError } from '../api/user-error';
+import { SessionMarker } from './session-marker';
 
 @Injectable({ providedIn: 'root' })
 export class SessionService {
   private readonly apollo = inject(Apollo);
   private readonly accessTokenStore = inject(AccessTokenStore);
   private readonly sessionRefresher = inject(SessionRefresher);
+  private readonly sessionMarker = inject(SessionMarker);
 
   private readonly customerQuery = graphqlResource(CurrentCustomerDocument, () =>
     this.accessTokenStore.signedIn() ? {} : undefined
   );
 
+  private readonly endedElsewhere = signal(false);
+
   readonly signedIn = this.accessTokenStore.signedIn;
   readonly loading = this.customerQuery.isLoading;
   readonly customer = computed(() => this.customerQuery.value()?.me ?? null);
   readonly sessions = computed(() => this.customer()?.sessions ?? []);
+  readonly sessionEnded = this.endedElsewhere.asReadonly();
 
   async restore(): Promise<void> {
-    await firstValueFrom(this.sessionRefresher.refresh());
+    if (!this.sessionMarker.present()) {
+      return;
+    }
+
+    const refreshed = await firstValueFrom(this.sessionRefresher.refresh());
+
+    if (!refreshed) {
+      this.sessionMarker.forget();
+      this.endedElsewhere.set(true);
+    }
   }
 
   async register(input: RegisterInput): Promise<UserError[]> {
@@ -3355,6 +3463,8 @@ export class SessionService {
   }
 
   async logIn(input: LoginInput): Promise<UserError[]> {
+    this.endedElsewhere.set(false);
+
     const answer = await firstValueFrom(
       this.apollo.mutate<LoginMutation, LoginMutationVariables>({
         mutation: LoginDocument,
@@ -3410,12 +3520,15 @@ export class SessionService {
     }
 
     this.accessTokenStore.hold(payload.accessToken, payload.accessTokenExpiresAt);
+    this.sessionMarker.remember();
+    this.endedElsewhere.set(false);
 
     return payload.errors;
   }
 
   private async forgetCustomer(): Promise<void> {
     this.accessTokenStore.release();
+    this.sessionMarker.forget();
     await this.apollo.client.clearStore();
   }
 }
@@ -3427,8 +3540,7 @@ export class SessionService {
 
 ```ts
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { LoginFormComponent } from '../../shared/components/login-form/login-form.component';
+import { Router, RouterLink } from '@angular/router';
 import { UserErrorsComponent } from '../../shared/components/user-errors/user-errors.component';
 import { MoneyPipe } from '../../shared/money.pipe';
 import { attempt } from '../api/attempt';
@@ -3443,10 +3555,11 @@ const orderPageSize = 10;
   selector: 'app-account',
   templateUrl: './account.component.html',
   styleUrl: './account.component.scss',
-  imports: [RouterLink, MoneyPipe, LoginFormComponent, UserErrorsComponent],
+  imports: [RouterLink, MoneyPipe, UserErrorsComponent],
 })
 export class AccountComponent {
   private readonly sessionService = inject(SessionService);
+  private readonly router = inject(Router);
 
   protected readonly signedIn = this.sessionService.signedIn;
   protected readonly customer = this.sessionService.customer;
@@ -3471,11 +3584,16 @@ export class AccountComponent {
     );
 
     this.errors.set(answered ?? []);
+
+    if (!this.signedIn()) {
+      await this.router.navigate(['/login']);
+    }
   }
 
   protected async logOut(): Promise<void> {
     await attempt(() => this.sessionService.logOut(), this.problem);
     this.errors.set([]);
+    await this.router.navigate(['/login']);
   }
 }
 ```
@@ -3490,58 +3608,53 @@ export class AccountComponent {
 
   <app-user-errors [errors]="errors()" [problem]="problem()" />
 
-  @if (!signedIn()) {
+  @if (customer(); as signedInCustomer) {
     <p class="account__status" role="status">
-      Log in to see your order history and the devices you are logged in on.
+      Logged in as {{ signedInCustomer.name }} ({{ signedInCustomer.email }}).
     </p>
-    <app-login-form />
+  }
+
+  <button class="button button--quiet" type="button" (click)="logOut()">Log out</button>
+
+  <h2 class="account__section-heading">Order history</h2>
+
+  @if (loadingOrders()) {
+    <p class="account__status" role="status">Loading your orders.</p>
+  } @else if (orderCount() === 0) {
+    <p class="account__status" role="status">You have not placed an order yet.</p>
+    <a class="button" [routerLink]="['/']">Back to the catalogue</a>
   } @else {
-    @if (customer(); as signedInCustomer) {
-      <p class="account__status" role="status">
-        Logged in as {{ signedInCustomer.name }} ({{ signedInCustomer.email }}).
-      </p>
-    }
-
-    <button class="button button--quiet" type="button" (click)="logOut()">Log out</button>
-
-    <h2 class="account__section-heading">Order history</h2>
-
-    @if (loadingOrders()) {
-      <p class="account__status" role="status">Loading your orders.</p>
-    } @else if (orderCount() === 0) {
-      <p class="account__status" role="status">You have not placed an order yet.</p>
-      <a class="button" [routerLink]="['/']">Back to the catalogue</a>
-    } @else {
-      <table class="account__table">
-        <caption class="account__caption">
-          Your orders, newest first
-        </caption>
-        <thead>
+    <table class="account__table">
+      <caption class="account__caption">
+        Your orders, newest first
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Order</th>
+          <th scope="col">Placed</th>
+          <th scope="col">Status</th>
+          <th scope="col">Total</th>
+          <th scope="col">Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (order of orders(); track order.id) {
           <tr>
-            <th scope="col">Order</th>
-            <th scope="col">Placed</th>
-            <th scope="col">Status</th>
-            <th scope="col">Total</th>
-            <th scope="col">Details</th>
+            <th scope="row">{{ order.number }}</th>
+            <td>{{ order.placedAt }}</td>
+            <td>{{ order.status }}</td>
+            <td>{{ order.total | money }}</td>
+            <td>
+              <a [routerLink]="['/orders', order.id]">See order {{ order.number }}</a>
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          @for (order of orders(); track order.id) {
-            <tr>
-              <th scope="row">{{ order.number }}</th>
-              <td>{{ order.placedAt }}</td>
-              <td>{{ order.status }}</td>
-              <td>{{ order.total | money }}</td>
-              <td>
-                <a [routerLink]="['/orders', order.id]">See order {{ order.number }}</a>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    }
+        }
+      </tbody>
+    </table>
+  }
 
-    <h2 class="account__section-heading">Your sessions</h2>
+  <section class="account__sessions-panel" aria-labelledby="account-open-sessions">
+    <h2 class="account__section-heading" id="account-open-sessions">Open sessions</h2>
 
     <ul class="account__sessions">
       @for (session of sessions(); track session.id) {
@@ -3549,19 +3662,21 @@ export class AccountComponent {
           <span class="account__session-device">
             {{ session.device }}
             @if (session.current) {
-              <span class="account__session-current">this device</span>
+              <span class="account__session-current">(this device)</span>
             }
           </span>
           <span class="account__session-times">
             Logged in {{ session.createdAt }}, last used {{ session.lastUsedAt }}
           </span>
-          <button class="button button--quiet" type="button" (click)="revokeSession(session.id)">
-            Revoke {{ session.device }}
-          </button>
+          @if (!session.current) {
+            <button class="button button--quiet" type="button" (click)="revokeSession(session.id)">
+              Revoke {{ session.device }}
+            </button>
+          }
         </li>
       }
     </ul>
-  }
+  </section>
 </section>
 ```
 
@@ -3652,6 +3767,143 @@ export class AccountComponent {
 }
 ```
 
+## Logging in and registering
+
+### `src/app/login/login.component.ts`
+
+The login screen. `returnTo` comes from the url through the same component input binding the catalogue uses, and the notice is the contract's own `SESSION_INVALID` sentence rather than a new one.
+
+```ts
+import { Component, computed, inject, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { LoginFormComponent } from '../../shared/components/login-form/login-form.component';
+import { UserErrorsComponent } from '../../shared/components/user-errors/user-errors.component';
+import { SessionService } from '../account/session.service';
+import { userErrorMessage } from '../api/user-error';
+
+@Component({
+  selector: 'app-login',
+  templateUrl: './login.component.html',
+  styleUrl: './login.component.scss',
+  imports: [RouterLink, LoginFormComponent, UserErrorsComponent],
+})
+export class LoginComponent {
+  private readonly sessionService = inject(SessionService);
+
+  readonly returnTo = input<string | null>(null);
+
+  protected readonly sessionEndedNote = computed(() =>
+    this.sessionService.sessionEnded() ? userErrorMessage('SESSION_INVALID') : null
+  );
+}
+```
+
+### `src/app/login/login.component.html`
+
+
+
+```html
+<section class="login container">
+  <h1 class="login__heading">Log in</h1>
+
+  <app-user-errors [note]="sessionEndedNote()" />
+
+  <app-login-form mode="login" [returnTo]="returnTo()" />
+
+  <p class="login__alternative">
+    No account yet?
+    <a [routerLink]="['/register']">Register</a>
+  </p>
+</section>
+```
+
+### `src/app/login/login.component.scss`
+
+
+
+```scss
+.login {
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+
+  &__heading {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  &__alternative {
+    margin-top: 1rem;
+    color: #4b5563;
+
+    a {
+      text-decoration: underline;
+    }
+  }
+}
+```
+
+### `src/app/register/register.component.ts`
+
+The registration screen. It is the same form in its other mode, so the rules and the copy exist once.
+
+```ts
+import { Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { LoginFormComponent } from '../../shared/components/login-form/login-form.component';
+
+@Component({
+  selector: 'app-register',
+  templateUrl: './register.component.html',
+  styleUrl: './register.component.scss',
+  imports: [RouterLink, LoginFormComponent],
+})
+export class RegisterComponent {}
+```
+
+### `src/app/register/register.component.html`
+
+
+
+```html
+<section class="register container">
+  <h1 class="register__heading">Register</h1>
+
+  <app-login-form mode="register" />
+
+  <p class="register__alternative">
+    Already registered?
+    <a [routerLink]="['/login']">Log in</a>
+  </p>
+</section>
+```
+
+### `src/app/register/register.component.scss`
+
+
+
+```scss
+.register {
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+
+  &__heading {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  &__alternative {
+    margin-top: 1rem;
+    color: #4b5563;
+
+    a {
+      text-decoration: underline;
+    }
+  }
+}
+```
+
 ## The chrome
 
 ### `src/app/header/header.component.ts`
@@ -3662,6 +3914,7 @@ The two menu links, the cart count, the account link and the wishlist button. Th
 import { Component, computed, inject } from '@angular/core';
 import { isActive, Router, RouterLink } from '@angular/router';
 import { WishlistService } from '../../shared/services/wishlist.service';
+import { SessionService } from '../account/session.service';
 import { CartService } from '../cart/cart.service';
 import { WishlistDrawerService } from '../wishlist-drawer/wishlist-drawer.service';
 
@@ -3677,11 +3930,12 @@ export default class HeaderComponent {
 
   readonly count = inject(WishlistService).count;
   readonly itemCount = inject(CartService).itemCount;
+  readonly signedIn = inject(SessionService).signedIn;
 
   readonly cartLabel = computed(
     () => `Cart, ${this.itemCount()} ${this.itemCount() === 1 ? 'item' : 'items'}`
   );
-  readonly wishlistLabel = computed(() => `Wishlist, ${this.count()}`);
+  readonly wishlistLabel = computed(() => `Wishlist, ${this.count()} saved`);
 
   readonly menuLinks = [
     { path: '/', label: 'Catalogue' },
@@ -3734,7 +3988,11 @@ export default class HeaderComponent {
       }
     </a>
 
-    <a class="desktop-navbar__action" routerLink="/account">Account</a>
+    @if (signedIn()) {
+      <a class="desktop-navbar__action" routerLink="/account">Account</a>
+    } @else {
+      <a class="desktop-navbar__action" routerLink="/login">Log in</a>
+    }
 
     <button
       class="desktop-navbar__check-wish-list"
@@ -4226,11 +4484,14 @@ export const appConfig: ApplicationConfig = {
 import { Routes } from '@angular/router';
 import { AboutComponent } from './about/about.component';
 import { AccountComponent } from './account/account.component';
+import { signedInGuard } from './account/signed-in.guard';
 import { CartComponent } from './cart/cart.component';
 import { CatalogueComponent } from './catalogue/catalogue.component';
 import { CheckoutComponent } from './checkout/checkout.component';
+import { LoginComponent } from './login/login.component';
 import { OrderConfirmationComponent } from './order-confirmation/order-confirmation.component';
 import { ProductComponent } from './product/product.component';
+import { RegisterComponent } from './register/register.component';
 
 export const routes: Routes = [
   {
@@ -4246,22 +4507,35 @@ export const routes: Routes = [
   {
     path: 'cart',
     component: CartComponent,
-    title: 'Your cart | Zappy Mart',
+    title: 'Cart | Zappy Mart',
   },
   {
     path: 'checkout',
     component: CheckoutComponent,
+    canActivate: [signedInGuard],
     title: 'Checkout | Zappy Mart',
   },
   {
     path: 'orders/:orderId',
     component: OrderConfirmationComponent,
+    canActivate: [signedInGuard],
     title: 'Your order | Zappy Mart',
   },
   {
     path: 'account',
     component: AccountComponent,
+    canActivate: [signedInGuard],
     title: 'Your account | Zappy Mart',
+  },
+  {
+    path: 'login',
+    component: LoginComponent,
+    title: 'Log in | Zappy Mart',
+  },
+  {
+    path: 'register',
+    component: RegisterComponent,
+    title: 'Register | Zappy Mart',
   },
   {
     path: 'about',
@@ -4391,8 +4665,8 @@ npm run test:coverage
 A passing run prints:
 
 ```
-Test Suites: 18 passed, 18 total
-Tests:       99 passed, 99 total
+Test Suites: 22 passed, 22 total
+Tests:       112 passed, 112 total
 Snapshots:   0 total
 ```
 
@@ -4417,43 +4691,82 @@ timers. No test in the folder used them.
 
 ## The end to end suite
 
-`tools/end-to-end/` is the shared Playwright suite, and the React Router agent owns it.
-This frontend is not in it yet and creates nothing there. To point it here, serve the
-application on port 4200 and give the suite the address:
+`tools/end-to-end/` is the shared Playwright suite. The React Router item owns that
+folder and nothing here changes it. This store front passes it.
+
+Three terminals. The mock server first, then this application, then the suite:
 
 ```bash
+cd tools/mock-server
+node server.mjs
+
 cd frontends/angular
 npm start
 
-FRONTEND_URL=http://localhost:4200 npm test --prefix ../../tools/end-to-end
+cd tools/end-to-end
+FRONTEND_URL=http://localhost:4200 GRAPHQL_URL=http://localhost:4000/graphql RESET_SEED=true \
+  npx playwright test --grep-invert "@progressive-enhancement" --reporter=line
 ```
 
-`npm start` is `ng serve`, which binds to `http://localhost:4200` and needs the mock
-server or a backend on `http://localhost:4000/graphql`. For a run against the production
-bundle instead, `npm run build` writes `dist/zappy-mart-frontend/browser`, which any
-static server can serve as long as every path falls back to `index.html`.
+A passing run prints:
 
-The six journeys the suite will find are the six screens above. The seed makes two of
-them reachable without any setup: `product-07` has no stock, so adding it is refused, and
-`product-12` has one item left, so adding a second is refused with the stock in the
-answer.
+```
+Running 3 tests using 1 worker
 
-The suite that landed in `tools/end-to-end/` on 9 September 2026 is written against the
-React Router markup. Several of its expectations already hold here: the catalogue's `h1`,
-the searchbox named "Search by name", the combobox named "Category", the Filter button,
-the product card as an `article` with one link named after the product, the cart link
-named "Cart, 2 items" and the confirmation under `/orders/`. Four do not, and each is a
-decision for whoever owns the shared markup rather than for one frontend on its own:
+[1/3] [chromium] > tests\catalogueToPlacedOrder.spec.ts:13:1 > a visitor filters the catalogue, fills a cart, uses a promotion code and places an order
+[2/3] [chromium] > tests\sessionsAndReplay.spec.ts:24:1 > a customer registers, logs in twice, revokes the other session and cannot replay a dead one
+[3/3] [chromium] > tests\storeFrontIsUp.spec.ts:4:1 > the catalogue answers with products, a filter and the shop chrome
+  3 passed (7.0s)
+```
 
-| The suite asks for | This frontend has |
+`withoutJavaScript.spec.ts` is left out with `--grep-invert "@progressive-enhancement"`.
+A single page application has nothing to render before its script runs, which is the one
+thing this shape gives up against the two server rendered store fronts, and the suite
+says so in its own tag.
+
+`npm start` is `ng serve`, which binds to `http://localhost:4200`. For a run against the
+production bundle instead, `npm run build` writes `dist/zappy-mart-frontend/browser`,
+which any static server can serve as long as every path falls back to `index.html`.
+
+### The four decisions the suite settled
+
+`tools/end-to-end/README.md`, section "The names the store front has to use", is the
+authority for every name below. Four of them were open when this store front was first
+written, and this is where each landed on 9 September 2026:
+
+| Decision | What this store front does |
 |---|---|
-| a link named `Wishlist, <count>` | a button of that name, which opens the drawer this application has had since April 2025 |
-| `/register` with a Register button, and an `h1` named "Log in" | one form with a mode switch, on `/account` and on `/checkout`, under the `h1` of that screen |
-| the promotion code on the checkout screen, with "WELCOME10 takes off €1.97." | the promotion code on the cart screen, where `Cart.promotion` in the contract puts it |
-| a region named "Open sessions", and "(this device)" on a session | a heading named "Your sessions", and a "this device" label |
+| The wishlist stays a drawer | The header button is named `Wishlist, <count> saved`, and the suite accepts a link or a button of that name |
+| Logging in and registering are screens | `/login` under an `h1` `Log in` and `/register` under an `h1` `Register`, both rendering one `LoginFormComponent`. `/checkout`, `/orders/<id>` and `/account` are behind `signedInGuard`, which sends a signed out visitor to `/login?returnTo=<where they were going>` and back again after the login |
+| The promotion code lives on the checkout | Textbox `Promotion code` and button `Apply code` on `/checkout`, with `WELCOME10 takes off €1.97.` under it. The cart keeps the applied code in its summary and no longer carries the form |
+| The account lists the open sessions | A `section` labelled by its `Open sessions` heading, one list item per session, `(this device)` on the current one and a button `Revoke <device>` on every other one |
 
-`tools/end-to-end/` belongs to the React Router item, so nothing here changes it. The four
-rows above are the list to settle when the suite is pointed at more than one frontend.
+Two smaller things came with them. The catalogue filter gained the checkbox
+`In stock only`, which is `ProductFilter.inStockOnly` in the contract and rides in the
+url as `?stock=available`. And the cart line became a small form with a spinbutton and an
+`Update` button rather than a field that saves itself on blur.
+
+### The cookie that is not a token
+
+The account journey ends by replaying a dead session: it takes every cookie the browser
+holds while signed in, logs out, puts them all back and asks for `/account` again. The
+store has to refuse them.
+
+The Angular shape holds its access token in memory and nothing else, so what a replay
+puts back is the API's own `zappy_refresh` and `zappy_cart` cookies plus one cookie of
+this application's own, `zappy_session`, which holds the word `open`. It says what it is:
+this browser has a session open. It is not a token, it is not httpOnly and it grants
+nothing. `SessionService.restore` reads it, and that changed two things for the better:
+
+- A visitor with no marker makes **no** refresh request at all, so a first visit is one
+  request lighter than it was.
+- A visitor with a marker whose refresh is refused is told why. The session was ended
+  somewhere else, so `/login` shows the alert `Your session has ended. Please log in
+  again.`, which is `userErrorMessage('SESSION_INVALID')` and no new sentence.
+
+Replaying the cookies after a logout therefore lands exactly where the suite asks: the
+marker says a session was open, the refresh of the dead token fails, the marker is thrown
+away and the visitor reads that same alert.
 
 ## The test files
 
@@ -4467,6 +4780,7 @@ const selectorByRole: Record<string, string> = {
   button: 'button, [role="button"]',
   caption: 'caption, [role="caption"]',
   cell: 'td, [role="cell"]',
+  checkbox: 'input[type="checkbox"], [role="checkbox"]',
   columnheader: 'th[scope="col"], [role="columnheader"]',
   combobox: 'select, [role="combobox"]',
   form: 'form[aria-label], form[aria-labelledby], [role="form"]',
@@ -4504,11 +4818,32 @@ function tidy(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
 }
 
+function labelledByText(element: Element): string {
+  const labelledBy = element.getAttribute('aria-labelledby');
+
+  if (labelledBy === null) {
+    return '';
+  }
+
+  const root = element.getRootNode() as Document | ShadowRoot;
+
+  return labelledBy
+    .split(/\s+/)
+    .map((identifier) => root.querySelector(`#${identifier}`)?.textContent ?? '')
+    .join(' ');
+}
+
 function accessibleName(element: Element): string {
   const ariaLabel = element.getAttribute('aria-label');
 
   if (ariaLabel !== null) {
     return tidy(ariaLabel);
+  }
+
+  const labelledBy = labelledByText(element);
+
+  if (labelledBy !== '') {
+    return tidy(labelledBy);
   }
 
   if (formControls.has(element.tagName)) {
@@ -4651,6 +4986,10 @@ describe('CatalogueComponent', () => {
     expect(byRole(page, 'heading', 'Mens Cotton Jacket')).toBeTruthy();
   });
 
+  it('offers an in stock only checkbox', () => {
+    expect(byRole(fixture.nativeElement as HTMLElement, 'checkbox', 'In stock only')).toBeTruthy();
+  });
+
   it('puts the search term and the category in the url when the filter is submitted', () => {
     const page = fixture.nativeElement as HTMLElement;
     const navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
@@ -4664,7 +5003,7 @@ describe('CatalogueComponent', () => {
     byRole(page, 'button', 'Filter').click();
 
     expect(navigate).toHaveBeenCalledWith(['/'], {
-      queryParams: { category: 'mens-clothing', search: 'jacket' },
+      queryParams: { category: 'mens-clothing', search: 'jacket', stock: null },
     });
   });
 
@@ -4840,8 +5179,6 @@ describe('CartComponent', () => {
     cart: ReturnType<typeof signal<typeof filledCart | null>>;
     changeLineQuantity: jest.Mock;
     removeLine: jest.Mock;
-    applyPromotionCode: jest.Mock;
-    removePromotionCode: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -4854,9 +5191,7 @@ describe('CartComponent', () => {
       cart,
       changeLineQuantity: jest.fn().mockResolvedValue(noChange),
       removeLine: jest.fn().mockResolvedValue(noChange),
-      applyPromotionCode: jest.fn().mockResolvedValue(noChange),
-      removePromotionCode: jest.fn().mockResolvedValue(noChange),
-    };
+        };
 
     await TestBed.configureTestingModule({
       providers: [
@@ -4882,19 +5217,21 @@ describe('CartComponent', () => {
   it('lists the lines of the cart with the totals', () => {
     const page = fixture.nativeElement as HTMLElement;
 
-    expect(byRole(page, 'heading', 'Your cart')).toBeTruthy();
+    expect(byRole(page, 'heading', 'Cart')).toBeTruthy();
     expect(byRole(page, 'table')).toBeTruthy();
     expect(byRole(page, 'rowheader', /Mens Cotton Jacket/)).toBeTruthy();
+    expect(byRole(page, 'link', 'Go to checkout')).toBeTruthy();
     expect(allByRole(page, 'cell').some((cell) => cell.textContent?.includes('€111.98'))).toBe(
       true
     );
   });
 
-  it('changes the quantity of a line', async () => {
-    const quantity = byRole(fixture.nativeElement as HTMLElement, 'spinbutton') as HTMLInputElement;
+  it('changes the quantity of a line when its update button is used', async () => {
+    const page = fixture.nativeElement as HTMLElement;
+    const quantity = byRole(page, 'spinbutton') as HTMLInputElement;
 
     quantity.value = '3';
-    quantity.dispatchEvent(new Event('change'));
+    byRole(page, 'button', 'Update').click();
     await fixture.whenStable();
 
     expect(cartService.changeLineQuantity).toHaveBeenCalledWith('line-1', 3);
@@ -4905,18 +5242,6 @@ describe('CartComponent', () => {
     await fixture.whenStable();
 
     expect(cartService.removeLine).toHaveBeenCalledWith('line-1');
-  });
-
-  it('applies a promotion code', async () => {
-    const page = fixture.nativeElement as HTMLElement;
-    const code = byRole(page, 'textbox') as HTMLInputElement;
-
-    code.value = 'WELCOME10';
-    code.dispatchEvent(new Event('input'));
-    byRole(page, 'button', 'Apply').click();
-    await fixture.whenStable();
-
-    expect(cartService.applyPromotionCode).toHaveBeenCalledWith('WELCOME10');
   });
 
   it('says the cart is empty when it has no lines', () => {
@@ -4938,46 +5263,63 @@ describe('CartComponent', () => {
 import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { byRole, queryByRole } from '../../testing/roles';
+import { byRole } from '../../testing/roles';
 import { SessionService } from '../account/session.service';
 import { CartService } from '../cart/cart.service';
 import { CheckoutAttempt } from './checkout-attempt.service';
 import { CheckoutComponent } from './checkout.component';
 import { OrderService } from './order.service';
 
-const jacket = {
-  id: 'product-03',
-  name: 'Mens Cotton Jacket',
-  slug: 'mens-cotton-jacket',
-  stock: 8,
+const boatNeck = {
+  id: 'product-18',
+  name: "MBJ Women's Solid Short Sleeve Boat Neck V",
+  slug: 'mbj-womens-solid-short-sleeve-boat-neck-v',
+  stock: 25,
   imageUrl: null,
-  price: { amount: 5599, currency: 'EUR' },
-  category: { id: 'category-mens-clothing', name: "Men's clothing", slug: 'mens-clothing' },
+  price: { amount: 985, currency: 'EUR' },
+  category: { id: 'category-womens-clothing', name: "Women's clothing", slug: 'womens-clothing' },
+};
+
+const appliedPromotion = {
+  code: 'WELCOME10',
+  kind: 'PERCENTAGE',
+  discount: { amount: 197, currency: 'EUR' },
 };
 
 const filledCart = {
   id: 'cart-1',
   updatedAt: '2026-09-09T10:00:00Z',
-  promotion: null,
-  subtotal: { amount: 5599, currency: 'EUR' },
-  shipping: { amount: 0, currency: 'EUR' },
-  total: { amount: 5599, currency: 'EUR' },
-  lines: [{ id: 'line-1', quantity: 1, lineTotal: { amount: 5599, currency: 'EUR' }, product: jacket }],
+  promotion: null as typeof appliedPromotion | null,
+  subtotal: { amount: 1970, currency: 'EUR' },
+  shipping: { amount: 495, currency: 'EUR' },
+  total: { amount: 2465, currency: 'EUR' },
+  lines: [
+    { id: 'line-1', quantity: 2, lineTotal: { amount: 1970, currency: 'EUR' }, product: boatNeck },
+  ],
+};
+
+const discountedCart = {
+  ...filledCart,
+  promotion: appliedPromotion,
+  total: { amount: 2268, currency: 'EUR' },
 };
 
 describe('CheckoutComponent', () => {
   let fixture: ComponentFixture<CheckoutComponent>;
-  let signedIn: ReturnType<typeof signal<boolean>>;
+  let cart: ReturnType<typeof signal<typeof filledCart | null>>;
   let place: jest.Mock;
   let finish: jest.Mock;
+  let applyPromotionCode: jest.Mock;
   let navigate: jest.SpyInstance;
 
   beforeEach(async () => {
-    signedIn = signal(true);
     place = jest.fn().mockResolvedValue({ order: { id: 'order-1' }, errors: [] });
     finish = jest.fn();
-
-    const cart = signal<typeof filledCart | null>(filledCart);
+    cart = signal<typeof filledCart | null>(filledCart);
+    applyPromotionCode = jest.fn().mockImplementation(async () => {
+      cart.set(discountedCart);
+      return { cart: discountedCart, availableStock: null, errors: [] };
+    });
 
     await TestBed.configureTestingModule({
       providers: [
@@ -4988,16 +5330,19 @@ describe('CheckoutComponent', () => {
             cart,
             lines: computed(() => cart()?.lines ?? []),
             empty: computed(() => (cart()?.lines.length ?? 0) === 0),
-            itemCount: computed(() => 1),
+            itemCount: computed(() => 2),
+            applyPromotionCode,
           },
         },
         {
           provide: SessionService,
           useValue: {
-            signedIn,
-            customer: computed(() => ({ id: 'customer-01', name: 'Jane Doe', email: 'jane@example.com' })),
-            logIn: jest.fn().mockResolvedValue([]),
-            register: jest.fn().mockResolvedValue([]),
+            signedIn: signal(true),
+            customer: computed(() => ({
+              id: 'customer-01',
+              name: 'Jane Doe',
+              email: 'jane@example.com',
+            })),
           },
         },
         { provide: OrderService, useValue: { place } },
@@ -5015,8 +5360,24 @@ describe('CheckoutComponent', () => {
     const page = fixture.nativeElement as HTMLElement;
 
     expect(byRole(page, 'heading', 'Checkout')).toBeTruthy();
-    expect(byRole(page, 'status').textContent).toContain('Jane Doe');
-    expect(byRole(page, 'rowheader', 'Mens Cotton Jacket')).toBeTruthy();
+    expect(page.textContent).toContain('Jane Doe, check your order and place it.');
+    expect(byRole(page, 'rowheader', "MBJ Women's Solid Short Sleeve Boat Neck V")).toBeTruthy();
+    expect(page.textContent).toContain('€24.65');
+  });
+
+  it('applies a promotion code and says what it takes off', async () => {
+    const page = fixture.nativeElement as HTMLElement;
+    const code = byRole(page, 'textbox', 'Promotion code') as HTMLInputElement;
+
+    code.value = 'WELCOME10';
+    code.dispatchEvent(new Event('input'));
+    byRole(page, 'button', 'Apply code').click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(applyPromotionCode).toHaveBeenCalledWith('WELCOME10');
+    expect(page.textContent).toContain('WELCOME10 takes off €1.97.');
+    expect(page.textContent).toContain('€22.68');
   });
 
   it('places the order with one idempotency key and goes to the confirmation', async () => {
@@ -5026,16 +5387,6 @@ describe('CheckoutComponent', () => {
     expect(place).toHaveBeenCalledWith('attempt-1');
     expect(finish).toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith(['/orders', 'order-1']);
-  });
-
-  it('asks an anonymous visitor to log in instead of showing the order button', () => {
-    signedIn.set(false);
-    fixture.detectChanges();
-
-    const page = fixture.nativeElement as HTMLElement;
-
-    expect(byRole(page, 'form', 'Log in')).toBeTruthy();
-    expect(queryByRole(page, 'button', 'Place order')).toBeNull();
   });
 });
 ```
@@ -5142,8 +5493,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
-import { byRole, queryByRole } from '../../testing/roles';
+import { provideRouter, Router } from '@angular/router';
+import { byRole, allByRole, queryByRole } from '../../testing/roles';
 import { GRAPHQL_URL } from '../api/graphql-url';
 import { AccountComponent } from './account.component';
 import { SessionService } from './session.service';
@@ -5255,8 +5606,19 @@ describe('AccountComponent', () => {
     expect(byRole(page, 'heading', 'Your account')).toBeTruthy();
     expect(byRole(page, 'heading', 'Order history')).toBeTruthy();
     expect(byRole(page, 'rowheader', 'ZM-2026-0001')).toBeTruthy();
-    expect(byRole(page, 'heading', 'Your sessions')).toBeTruthy();
-    expect(byRole(page, 'listitem', /Chrome on Windows/)).toBeTruthy();
+    const openSessions = byRole(page, 'region', 'Open sessions');
+    expect(allByRole(openSessions, 'listitem').length).toBe(2);
+    expect(byRole(openSessions, 'listitem', /Chrome on Windows/).textContent).toContain(
+      '(this device)'
+    );
+  });
+
+  it('offers a revoke button on every session but the current one', async () => {
+    await render();
+    const openSessions = byRole(fixture.nativeElement as HTMLElement, 'region', 'Open sessions');
+
+    expect(allByRole(openSessions, 'button').length).toBe(1);
+    expect(queryByRole(openSessions, 'button', 'Revoke Chrome on Windows')).toBeNull();
   });
 
   it('revokes one session', async () => {
@@ -5268,14 +5630,15 @@ describe('AccountComponent', () => {
     expect(revokeSession).toHaveBeenCalledWith('session-2');
   });
 
-  it('asks an anonymous visitor to log in', async () => {
-    signedIn.set(false);
+  it('sends the customer to the login screen after logging out', async () => {
     await render();
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
 
-    const page = fixture.nativeElement as HTMLElement;
+    byRole(fixture.nativeElement as HTMLElement, 'button', 'Log out').click();
+    await fixture.whenStable();
 
-    expect(byRole(page, 'form', 'Log in')).toBeTruthy();
-    expect(queryByRole(page, 'heading', 'Order history')).toBeNull();
+    expect(logOut).toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith(['/login']);
   });
 });
 ```
@@ -5864,6 +6227,246 @@ describe('WishlistService', () => {
 });
 ```
 
+### `src/app/account/signed-in.guard.spec.ts`
+
+The guard lets a customer through and sends everybody else to the login screen with the way back.
+
+```ts
+import { signal } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import {
+  provideRouter,
+  Router,
+  RouterStateSnapshot,
+  UrlTree,
+  type ActivatedRouteSnapshot,
+} from '@angular/router';
+import { SessionService } from './session.service';
+import { signedInGuard } from './signed-in.guard';
+
+describe('signedInGuard', () => {
+  let signedIn: ReturnType<typeof signal<boolean>>;
+
+  function guardFor(url: string): boolean | UrlTree {
+    return TestBed.runInInjectionContext(
+      () =>
+        signedInGuard(
+          {} as ActivatedRouteSnapshot,
+          { url } as RouterStateSnapshot
+        ) as boolean | UrlTree
+    );
+  }
+
+  beforeEach(() => {
+    signedIn = signal(false);
+
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), { provide: SessionService, useValue: { signedIn } }],
+    });
+  });
+
+  it('lets a signed in customer through', () => {
+    signedIn.set(true);
+
+    expect(guardFor('/checkout')).toBe(true);
+  });
+
+  it('sends an anonymous visitor to the login screen with the way back', () => {
+    const answer = guardFor('/checkout');
+
+    expect(TestBed.inject(Router).serializeUrl(answer as UrlTree)).toBe(
+      '/login?returnTo=%2Fcheckout'
+    );
+  });
+});
+```
+
+### `src/app/account/session-marker.spec.ts`
+
+
+
+```ts
+import { TestBed } from '@angular/core/testing';
+import { SessionMarker } from './session-marker';
+
+describe('SessionMarker', () => {
+  let sessionMarker: SessionMarker;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({});
+    sessionMarker = TestBed.inject(SessionMarker);
+    sessionMarker.forget();
+  });
+
+  it('starts with no marker, so a first visit makes no refresh request', () => {
+    expect(sessionMarker.present()).toBe(false);
+  });
+
+  it('remembers that this browser has a session', () => {
+    sessionMarker.remember();
+
+    expect(sessionMarker.present()).toBe(true);
+    expect(document.cookie).toContain('zappy_session=open');
+  });
+
+  it('forgets the marker again', () => {
+    sessionMarker.remember();
+    sessionMarker.forget();
+
+    expect(sessionMarker.present()).toBe(false);
+  });
+});
+```
+
+### `src/app/login/login.component.spec.ts`
+
+The login screen, including the notice a revoked session leaves behind.
+
+```ts
+import { signal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
+import { byRole, queryByRole } from '../../testing/roles';
+import { SessionService } from '../account/session.service';
+import { LoginComponent } from './login.component';
+
+describe('LoginComponent', () => {
+  let fixture: ComponentFixture<LoginComponent>;
+  let sessionEnded: ReturnType<typeof signal<boolean>>;
+  let logIn: jest.Mock;
+
+  beforeEach(async () => {
+    sessionEnded = signal(false);
+    logIn = jest.fn().mockResolvedValue([]);
+
+    await TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        {
+          provide: SessionService,
+          useValue: { sessionEnded, logIn, register: jest.fn().mockResolvedValue([]) },
+        },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
+  });
+
+  it('shows the login heading and the fields the customer fills', () => {
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(byRole(page, 'heading', 'Log in')).toBeTruthy();
+    expect(byRole(page, 'textbox', 'Email address')).toBeTruthy();
+    expect(byRole(page, 'button', 'Log in')).toBeTruthy();
+    expect(queryByRole(page, 'textbox', 'Name')).toBeNull();
+    expect(queryByRole(page, 'alert')).toBeNull();
+  });
+
+  it('says so when the session was ended somewhere else', () => {
+    sessionEnded.set(true);
+    fixture.detectChanges();
+
+    expect(byRole(fixture.nativeElement as HTMLElement, 'alert').textContent).toContain(
+      'Your session has ended. Please log in again.'
+    );
+  });
+
+  it('logs the customer in and takes them where they were going', async () => {
+    const page = fixture.nativeElement as HTMLElement;
+    const navigate = jest
+      .spyOn(TestBed.inject(Router), 'navigateByUrl')
+      .mockResolvedValue(true);
+    fixture.componentRef.setInput('returnTo', '/checkout');
+    fixture.detectChanges();
+
+    const email = byRole(page, 'textbox', 'Email address') as HTMLInputElement;
+    email.value = 'jane@example.com';
+    email.dispatchEvent(new Event('input'));
+
+    const password = page.querySelector('#login-form-password') as HTMLInputElement;
+    password.value = 'correct horse battery staple';
+    password.dispatchEvent(new Event('input'));
+
+    byRole(page, 'button', 'Log in').click();
+    await fixture.whenStable();
+
+    expect(logIn).toHaveBeenCalledWith({
+      email: 'jane@example.com',
+      password: 'correct horse battery staple',
+    });
+    expect(navigate).toHaveBeenCalledWith('/checkout');
+  });
+});
+```
+
+### `src/app/register/register.component.spec.ts`
+
+
+
+```ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
+import { byRole } from '../../testing/roles';
+import { SessionService } from '../account/session.service';
+import { RegisterComponent } from './register.component';
+
+describe('RegisterComponent', () => {
+  let fixture: ComponentFixture<RegisterComponent>;
+  let register: jest.Mock;
+
+  beforeEach(async () => {
+    register = jest.fn().mockResolvedValue([]);
+
+    await TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: SessionService, useValue: { register, logIn: jest.fn() } },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(RegisterComponent);
+    fixture.detectChanges();
+  });
+
+  it('asks for a name, an email address and a password', () => {
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(byRole(page, 'heading', 'Register')).toBeTruthy();
+    expect(byRole(page, 'textbox', 'Name')).toBeTruthy();
+    expect(byRole(page, 'textbox', 'Email address')).toBeTruthy();
+    expect(byRole(page, 'button', 'Register')).toBeTruthy();
+  });
+
+  it('registers the customer and takes them to their account', async () => {
+    const page = fixture.nativeElement as HTMLElement;
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+    const name = byRole(page, 'textbox', 'Name') as HTMLInputElement;
+    name.value = 'Sam Rider';
+    name.dispatchEvent(new Event('input'));
+
+    const email = byRole(page, 'textbox', 'Email address') as HTMLInputElement;
+    email.value = 'sam@example.com';
+    email.dispatchEvent(new Event('input'));
+
+    const password = page.querySelector('#login-form-password') as HTMLInputElement;
+    password.value = 'correct horse battery staple';
+    password.dispatchEvent(new Event('input'));
+
+    byRole(page, 'button', 'Register').click();
+    await fixture.whenStable();
+
+    expect(register).toHaveBeenCalledWith({
+      name: 'Sam Rider',
+      email: 'sam@example.com',
+      password: 'correct horse battery staple',
+    });
+    expect(navigate).toHaveBeenCalledWith('/account');
+  });
+});
+```
+
 ### `src/shared/services/local-storage.service.spec.ts`
 
 Unchanged.
@@ -6035,6 +6638,7 @@ import HeaderComponent from './header.component';
 import { WishlistDrawerService } from '../wishlist-drawer/wishlist-drawer.service';
 import { WishlistService } from '../../shared/services/wishlist.service';
 import { CartService } from '../cart/cart.service';
+import { SessionService } from '../account/session.service';
 import { Component, signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
@@ -6044,6 +6648,7 @@ describe('HeaderComponent', () => {
   let mockDrawerService: Partial<WishlistDrawerService>;
   let mockWishlistService: Partial<WishlistService>;
   let mockCartService: Partial<CartService>;
+  let signedIn: ReturnType<typeof signal<boolean>>;
 
   beforeEach(async () => {
     mockDrawerService = {
@@ -6058,6 +6663,8 @@ describe('HeaderComponent', () => {
       itemCount: signal(2),
     };
 
+    signedIn = signal(false);
+
     await TestBed.configureTestingModule({
       imports: [HeaderComponent],
       providers: [
@@ -6065,6 +6672,7 @@ describe('HeaderComponent', () => {
         { provide: WishlistDrawerService, useValue: mockDrawerService },
         { provide: WishlistService, useValue: mockWishlistService },
         { provide: CartService, useValue: mockCartService },
+        { provide: SessionService, useValue: { signedIn } },
       ],
     }).compileComponents();
 
@@ -6096,6 +6704,24 @@ describe('HeaderComponent', () => {
   it('should display the number of items in the cart', () => {
     const badge = fixture.debugElement.query(By.css('.cart-count-badge'));
     expect(badge.nativeElement.textContent).toContain('2');
+  });
+
+  it('should name the cart and the wishlist with their counts', () => {
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(page.querySelector('[aria-label="Cart, 2 items"]')).toBeTruthy();
+    expect(page.querySelector('[aria-label="Wishlist, 3 saved"]')).toBeTruthy();
+  });
+
+  it('should offer a log in link while nobody is signed in and an account link after', () => {
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.textContent).toContain('Log in');
+
+    signedIn.set(true);
+    fixture.detectChanges();
+
+    expect(page.textContent).toContain('Account');
+    expect(page.textContent).not.toContain('Log in');
   });
 
   it('should call openDrawer when heart button is clicked', () => {

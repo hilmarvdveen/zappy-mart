@@ -57,14 +57,10 @@
     max-width: 5rem;
   }
 
-  &__promotion {
-    margin-bottom: 1.5rem;
-  }
-
-  &__promotion-row {
+  &__quantity-form {
     display: flex;
+    align-items: center;
     gap: 0.5rem;
-    max-width: 26rem;
   }
 
   &__summary {

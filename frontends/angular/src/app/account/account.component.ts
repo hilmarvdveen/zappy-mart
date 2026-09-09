@@ -1,6 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { LoginFormComponent } from '../../shared/components/login-form/login-form.component';
+import { Router, RouterLink } from '@angular/router';
 import { UserErrorsComponent } from '../../shared/components/user-errors/user-errors.component';
 import { MoneyPipe } from '../../shared/money.pipe';
 import { attempt } from '../api/attempt';
@@ -15,10 +14,11 @@ const orderPageSize = 10;
   selector: 'app-account',
   templateUrl: './account.component.html',
   styleUrl: './account.component.scss',
-  imports: [RouterLink, MoneyPipe, LoginFormComponent, UserErrorsComponent],
+  imports: [RouterLink, MoneyPipe, UserErrorsComponent],
 })
 export class AccountComponent {
   private readonly sessionService = inject(SessionService);
+  private readonly router = inject(Router);
 
   protected readonly signedIn = this.sessionService.signedIn;
   protected readonly customer = this.sessionService.customer;
@@ -43,10 +43,15 @@ export class AccountComponent {
     );
 
     this.errors.set(answered ?? []);
+
+    if (!this.signedIn()) {
+      await this.router.navigate(['/login']);
+    }
   }
 
   protected async logOut(): Promise<void> {
     await attempt(() => this.sessionService.logOut(), this.problem);
     this.errors.set([]);
+    await this.router.navigate(['/login']);
   }
 }

@@ -3,19 +3,12 @@
 
   <app-user-errors [errors]="errors()" [problem]="problem()" />
 
-  @if (!signedIn()) {
-    <p class="checkout__status" role="status">
-      An order belongs to a customer, so please log in or create an account to place it.
-    </p>
-    <app-login-form />
-  } @else if (empty()) {
+  @if (empty()) {
     <p class="checkout__status" role="status">Your cart is empty, so there is nothing to order.</p>
     <a class="button" [routerLink]="['/']">Back to the catalogue</a>
   } @else {
     @if (customer(); as signedInCustomer) {
-      <p class="checkout__status" role="status">
-        Ordering as {{ signedInCustomer.name }} ({{ signedInCustomer.email }}).
-      </p>
+      <p class="checkout__status">{{ signedInCustomer.name }}, check your order and place it.</p>
     }
 
     <table class="checkout__table">
@@ -40,15 +33,35 @@
       </tbody>
     </table>
 
+    <form
+      class="checkout__promotion"
+      aria-label="Promotion code"
+      (submit)="applyPromotionCode($event)"
+    >
+      <label class="field__label" for="checkout-promotion-code">Promotion code</label>
+      <div class="checkout__promotion-row">
+        <input
+          class="field__input"
+          id="checkout-promotion-code"
+          name="promotionCode"
+          type="text"
+          [value]="promotionCode()"
+          (input)="promotionCode.set(valueOf($event))"
+        />
+        <button class="button" type="submit">Apply code</button>
+      </div>
+    </form>
+
     @if (cart(); as currentCart) {
+      @if (currentCart.promotion; as promotion) {
+        <p class="checkout__promotion-applied">
+          {{ promotion.code }} takes off {{ promotion.discount | money }}.
+        </p>
+      }
+
       <dl class="checkout__summary">
         <dt>Subtotal</dt>
         <dd>{{ currentCart.subtotal | money }}</dd>
-
-        @if (currentCart.promotion; as promotion) {
-          <dt>Promotion {{ promotion.code }}</dt>
-          <dd>{{ promotion.discount | money }}</dd>
-        }
 
         <dt>Shipping</dt>
         <dd>{{ currentCart.shipping | money }}</dd>

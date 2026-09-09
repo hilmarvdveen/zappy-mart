@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { LoginFormComponent } from '../../shared/components/login-form/login-form.component';
 import { UserErrorsComponent } from '../../shared/components/user-errors/user-errors.component';
+import { inputValueOf } from '../../shared/input-value';
 import { MoneyPipe } from '../../shared/money.pipe';
 import { SessionService } from '../account/session.service';
 import { attempt } from '../api/attempt';
@@ -14,7 +14,7 @@ import { OrderService } from './order.service';
   selector: 'app-checkout',
   templateUrl: './checkout.component.html',
   styleUrl: './checkout.component.scss',
-  imports: [RouterLink, MoneyPipe, LoginFormComponent, UserErrorsComponent],
+  imports: [RouterLink, MoneyPipe, UserErrorsComponent],
 })
 export class CheckoutComponent {
   private readonly router = inject(Router);
@@ -23,15 +23,27 @@ export class CheckoutComponent {
   private readonly orderService = inject(OrderService);
   private readonly checkoutAttempt = inject(CheckoutAttempt);
 
-  protected readonly signedIn = this.sessionService.signedIn;
+  protected readonly valueOf = inputValueOf;
   protected readonly customer = this.sessionService.customer;
   protected readonly cart = this.cartService.cart;
   protected readonly lines = this.cartService.lines;
   protected readonly empty = this.cartService.empty;
 
+  protected readonly promotionCode = signal('');
   protected readonly placing = signal(false);
   protected readonly errors = signal<UserError[]>([]);
   protected readonly problem = signal<string | null>(null);
+
+  protected async applyPromotionCode(event: Event): Promise<void> {
+    event.preventDefault();
+
+    const change = await attempt(
+      () => this.cartService.applyPromotionCode(this.promotionCode()),
+      this.problem
+    );
+
+    this.errors.set(change?.errors ?? []);
+  }
 
   protected async placeOrder(): Promise<void> {
     this.placing.set(true);

@@ -44,7 +44,10 @@
       <dd>{{ placedOrder.subtotal | money }}</dd>
 
       @if (placedOrder.promotionCode !== null) {
-        <dt>Promotion {{ placedOrder.promotionCode }}</dt>
+        <dt>Promotion code</dt>
+        <dd>{{ placedOrder.promotionCode }}</dd>
+
+        <dt>Discount</dt>
         <dd>{{ placedOrder.discount | money }}</dd>
       }
 

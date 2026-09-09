@@ -2,7 +2,7 @@ import { Component, computed, inject, input, linkedSignal, signal } from '@angul
 import { Router } from '@angular/router';
 import ProductCardComponent from '../../shared/components/product-card/product-card.component';
 import { UserErrorsComponent } from '../../shared/components/user-errors/user-errors.component';
-import { inputValueOf } from '../../shared/input-value';
+import { checkedValueOf, inputValueOf } from '../../shared/input-value';
 import { WishlistService } from '../../shared/services/wishlist.service';
 import { attempt } from '../api/attempt';
 import { CatalogueDocument, ProductSummaryFragment } from '../api/generated/contract';
@@ -27,10 +27,13 @@ export class CatalogueComponent {
 
   readonly category = input('');
   readonly search = input('');
+  readonly stock = input('');
 
   protected readonly valueOf = inputValueOf;
+  protected readonly checkedOf = checkedValueOf;
   protected readonly searchTerm = linkedSignal(() => this.search());
   protected readonly chosenCategory = linkedSignal(() => this.category());
+  protected readonly inStockOnly = linkedSignal(() => this.stock() === 'available');
   protected readonly pageSize = signal(cataloguePageSize);
   protected readonly errors = signal<UserError[]>([]);
   protected readonly note = signal<string | null>(null);
@@ -40,6 +43,7 @@ export class CatalogueComponent {
     filter: {
       categorySlug: this.category() === '' ? null : this.category(),
       nameContains: this.search() === '' ? null : this.search(),
+      inStockOnly: this.stock() === 'available',
     },
     first: this.pageSize(),
   }));
@@ -67,6 +71,7 @@ export class CatalogueComponent {
       queryParams: {
         category: this.chosenCategory() === '' ? null : this.chosenCategory(),
         search: this.searchTerm() === '' ? null : this.searchTerm(),
+        stock: this.inStockOnly() ? 'available' : null,
       },
     });
   }

@@ -3,6 +3,7 @@ const selectorByRole: Record<string, string> = {
   button: 'button, [role="button"]',
   caption: 'caption, [role="caption"]',
   cell: 'td, [role="cell"]',
+  checkbox: 'input[type="checkbox"], [role="checkbox"]',
   columnheader: 'th[scope="col"], [role="columnheader"]',
   combobox: 'select, [role="combobox"]',
   form: 'form[aria-label], form[aria-labelledby], [role="form"]',
@@ -40,11 +41,32 @@ function tidy(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
 }
 
+function labelledByText(element: Element): string {
+  const labelledBy = element.getAttribute('aria-labelledby');
+
+  if (labelledBy === null) {
+    return '';
+  }
+
+  const root = element.getRootNode() as Document | ShadowRoot;
+
+  return labelledBy
+    .split(/\s+/)
+    .map((identifier) => root.querySelector(`#${identifier}`)?.textContent ?? '')
+    .join(' ');
+}
+
 function accessibleName(element: Element): string {
   const ariaLabel = element.getAttribute('aria-label');
 
   if (ariaLabel !== null) {
     return tidy(ariaLabel);
+  }
+
+  const labelledBy = labelledByText(element);
+
+  if (labelledBy !== '') {
+    return tidy(labelledBy);
   }
 
   if (formControls.has(element.tagName)) {

@@ -1,0 +1,12 @@
+<section class="login container">
+  <h1 class="login__heading">Log in</h1>
+
+  <app-user-errors [note]="sessionEndedNote()" />
+
+  <app-login-form mode="login" [returnTo]="returnTo()" />
+
+  <p class="login__alternative">
+    No account yet?
+    <a [routerLink]="['/register']">Register</a>
+  </p>
+</section>
