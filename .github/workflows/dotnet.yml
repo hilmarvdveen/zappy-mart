@@ -1,0 +1,53 @@
+name: C# backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backends/dotnet/**"
+      - "contract/**"
+      - ".github/workflows/dotnet.yml"
+      - "tools/conformance/**"
+  pull_request:
+    paths:
+      - "backends/dotnet/**"
+      - "contract/**"
+      - ".github/workflows/dotnet.yml"
+      - "tools/conformance/**"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backends/dotnet
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+      - run: dotnet restore
+      - run: dotnet build --no-restore
+      - run: dotnet test --no-build
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: tools/conformance/package-lock.json
+      - run: npm ci
+        working-directory: tools/conformance
+      - name: Start the host and wait until it is ready
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+        run: |
+          dotnet run --project src/Zappy.Host --no-build > host.log 2>&1 &
+          for attempt in $(seq 1 90); do
+            if curl --silent --fail http://localhost:8090/health/ready > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat host.log
+          exit 1
+      - run: node run.mjs --url http://localhost:8090/graphql
+        working-directory: tools/conformance
