@@ -10,9 +10,22 @@ export type OrderRepository = {
   removeEverything(): Promise<void>;
 };
 
+export type OutboxRow = {
+  readonly id: string;
+  readonly event: OrderPlaced;
+  readonly attempts: number;
+  readonly nextAttemptAt: string;
+  readonly lastFailure: string | null;
+};
+
 export type OutboxStore = {
-  write(event: OrderPlaced): Promise<void>;
-  readUnpublished(): Promise<readonly OrderPlaced[]>;
+  write(event: OrderPlaced, recordedAt: string): Promise<string>;
+  readDue(moment: string): Promise<readonly OutboxRow[]>;
+  readUnpublished(): Promise<readonly OutboxRow[]>;
+  readDeadLettered(): Promise<readonly OutboxRow[]>;
+  markPublished(rowId: string, moment: string): Promise<void>;
+  recordFailure(rowId: string, attempts: number, nextAttemptAt: string, reason: string): Promise<void>;
+  markDeadLettered(rowId: string, attempts: number, moment: string, reason: string): Promise<void>;
 };
 
 export type CartToOrderReader = {
@@ -36,6 +49,6 @@ export type StockReserver = {
 export type OrderPlacedConsumers = {
   emptyCart(cartId: string): Promise<void>;
   clearCartPromotion(cartId: string): Promise<void>;
-  countPromotionUse(code: string, orderId: string): Promise<void>;
+  countPromotionUse(code: string, orderId: string, eventId: string): Promise<void>;
   sendConfirmation(event: OrderPlaced): Promise<void>;
 };

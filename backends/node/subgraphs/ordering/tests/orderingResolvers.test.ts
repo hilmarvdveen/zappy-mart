@@ -6,8 +6,11 @@ import { anonymousContext, buildTestSchema, runOperation, signedInContext } from
 import { createOrderingTables } from "../src/adapters/persistence/orderingTables.js";
 import { sqlOrderRepository } from "../src/adapters/persistence/sqlOrderRepository.js";
 import { sqlOutboxStore } from "../src/adapters/persistence/sqlOutboxStore.js";
+import { idempotentPlaceOrder, inFlightCheckouts } from "../src/application/idempotentPlaceOrder.js";
+import { outboxPublisher } from "../src/application/outboxPublisher.js";
 import { placeOrder } from "../src/application/placeOrder.js";
 import { readOrders } from "../src/application/readOrders.js";
+import { stockReservationSaga } from "../src/application/stockReservationSaga.js";
 import type {
   CartToOrderReader,
   OrderPlacedConsumers,
@@ -71,6 +74,23 @@ const consumers: OrderPlacedConsumers = {
   }
 };
 
+function checkoutFor(orders: OrderRepository): OrderingContext["checkout"] {
+  const publisher = outboxPublisher(outbox, consumers, () => systemClock.now());
+  return idempotentPlaceOrder(
+    placeOrder(
+      database,
+      orders,
+      outbox,
+      cartReader,
+      stockReservationSaga(stockReserver),
+      publisher,
+      () => systemClock.now()
+    ),
+    orders,
+    inFlightCheckouts()
+  );
+}
+
 function fullCart(): OrderableCart {
   return {
     cartId: "cart-01",
@@ -81,6 +101,11 @@ function fullCart(): OrderableCart {
     shipping: money(495),
     total: money(2465)
   };
+}
+
+async function outboxRowCount(): Promise<number> {
+  const rows = await database.queryAll<{ id: string }>("select id from outbox_message", []);
+  return rows.length;
 }
 
 before(async () => {
@@ -100,15 +125,7 @@ beforeEach(async () => {
     ...signedInContext("customer-01", "session-01"),
     orderStore,
     orders: readOrders(orderStore),
-    checkout: placeOrder(
-      database,
-      orderStore,
-      outbox,
-      cartReader,
-      stockReserver,
-      consumers,
-      () => systemClock.now()
-    ),
+    checkout: checkoutFor(orderStore),
     async resetOwnData(): Promise<void> {
       await orderStore.removeEverything();
     }
@@ -147,17 +164,21 @@ describe("the ordering subgraph", () => {
     assert.equal(payload.order.total.amount, 2465);
   });
 
-  it("writes one outbox row for the order it placed", async () => {
+  it("writes one outbox row and publishes it to the consumers", async () => {
     await runOperation(
       schema,
       `mutation { placeOrder(idempotencyKey: "checkout-outbox") { ${orderPayloadFields} } }`,
       {},
       context
     );
-    const waiting = await outbox.readUnpublished();
-    assert.equal(waiting.length, 1);
-    assert.equal(waiting[0]?.cartId, "cart-01");
-    assert.deepEqual(waiting[0]?.reservedLines, [{ productId: "product-18", quantity: 2 }]);
+    const published = await outbox.readDeadLettered();
+    assert.equal(published.length, 0);
+    assert.equal((await outbox.readUnpublished()).length, 0);
+    assert.deepEqual(announced, [
+      "emptyCart:cart-01",
+      "clearCartPromotion:cart-01",
+      "sendConfirmation"
+    ]);
   });
 
   it("tells the cart and the promotions subgraph after the commit", async () => {
@@ -183,7 +204,7 @@ describe("the ordering subgraph", () => {
     const firstOrder = (first.data?.["placeOrder"] as { order: { id: string } }).order;
     const secondOrder = (second.data?.["placeOrder"] as { order: { id: string } }).order;
     assert.equal(secondOrder.id, firstOrder.id);
-    assert.equal((await outbox.readUnpublished()).length, 1);
+    assert.equal(await outboxRowCount(), 1);
   });
 
   it("refuses without a signed in customer", async () => {
@@ -230,7 +251,7 @@ describe("the ordering subgraph", () => {
     assert.equal(payload.order, null);
     assert.equal(payload.errors[0]?.code, "OUT_OF_STOCK");
     assert.match(payload.errors[0]?.message ?? "", /Boat Neck/);
-    assert.equal((await outbox.readUnpublished()).length, 0);
+    assert.equal(await outboxRowCount(), 0);
   });
 
   it("pages the customer's orders newest first and answers nothing to a stranger", async () => {
@@ -299,18 +320,7 @@ describe("the ordering subgraph", () => {
         throw new Error("the database said no");
       }
     };
-    const failingContext: OrderingContext = {
-      ...context,
-      checkout: placeOrder(
-        database,
-        failingOrders,
-        outbox,
-        cartReader,
-        stockReserver,
-        consumers,
-        () => systemClock.now()
-      )
-    };
+    const failingContext: OrderingContext = { ...context, checkout: checkoutFor(failingOrders) };
     const answer = await runOperation(
       schema,
       `mutation { placeOrder(idempotencyKey: "checkout-fails") { ${orderPayloadFields} } }`,
@@ -319,6 +329,6 @@ describe("the ordering subgraph", () => {
     );
     assert.equal(answer.errorMessages.length, 1);
     assert.deepEqual(released, ["checkout-fails"]);
-    assert.equal((await outbox.readUnpublished()).length, 0);
+    assert.equal(await outboxRowCount(), 0);
   });
 });

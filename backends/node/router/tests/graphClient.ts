@@ -1,11 +1,17 @@
 export type GraphAnswer = {
   readonly data: Record<string, unknown> | null;
   readonly errors: readonly { readonly message: string }[];
+  readonly extensions: Record<string, unknown>;
 };
 
 export type GraphClient = {
   ask(document: string, variables?: Readonly<Record<string, unknown>>): Promise<GraphAnswer>;
   askWithoutOrigin(document: string, variables?: Readonly<Record<string, unknown>>): Promise<GraphAnswer>;
+  askWithExtraHeaders(
+    document: string,
+    variables: Readonly<Record<string, unknown>>,
+    extraHeaders: Readonly<Record<string, string>>
+  ): Promise<GraphAnswer>;
   useAccessToken(token: string | null): void;
   forgetCookies(): void;
   cookieHeader(): string;
@@ -18,9 +24,10 @@ export function graphClient(endpoint: string, origin = "http://localhost:5173"):
   async function send(
     document: string,
     variables: Readonly<Record<string, unknown>>,
-    withOrigin: boolean
+    withOrigin: boolean,
+    extraHeaders: Readonly<Record<string, string>> = {}
   ): Promise<GraphAnswer> {
-    const headers: Record<string, string> = { "content-type": "application/json" };
+    const headers: Record<string, string> = { "content-type": "application/json", ...extraHeaders };
     if (withOrigin) {
       headers["origin"] = origin;
     }
@@ -51,8 +58,9 @@ export function graphClient(endpoint: string, origin = "http://localhost:5173"):
     const body = (await response.json()) as {
       data?: Record<string, unknown> | null;
       errors?: readonly { message: string }[];
+      extensions?: Record<string, unknown>;
     };
-    return { data: body.data ?? null, errors: body.errors ?? [] };
+    return { data: body.data ?? null, errors: body.errors ?? [], extensions: body.extensions ?? {} };
   }
 
   return {
@@ -62,6 +70,10 @@ export function graphClient(endpoint: string, origin = "http://localhost:5173"):
 
     askWithoutOrigin(document, variables = {}) {
       return send(document, variables, false);
+    },
+
+    askWithExtraHeaders(document, variables, extraHeaders) {
+      return send(document, variables, true, extraHeaders);
     },
 
     useAccessToken(token) {

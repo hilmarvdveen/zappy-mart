@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
   cartCookieName,
+  circuitBreaker,
   openDatabaseFor,
   startSubgraph,
   systemClock,
@@ -10,6 +11,10 @@ import {
 import { createCartTables } from "../adapters/persistence/cartTables.js";
 import { sqlCartRepository } from "../adapters/persistence/sqlCartRepository.js";
 import { entityCatalogueReader } from "../adapters/catalogue/entityCatalogueReader.js";
+import {
+  degradedCatalogueReader,
+  lastKnownProducts
+} from "../adapters/catalogue/degradedCatalogueReader.js";
 import { changeCart } from "../application/changeCart.js";
 import { cartResolvers } from "../adapters/graphql/resolvers.js";
 import type { CartContext } from "../adapters/graphql/context.js";
@@ -20,13 +25,16 @@ export async function startCart(): Promise<{ url: string; stop(): Promise<void> 
   const database = openDatabaseFor("cart");
   await createCartTables(database);
   const carts = sqlCartRepository(database);
+  const catalogueBreaker = circuitBreaker("catalogue");
+  const remembered = lastKnownProducts();
 
   const running = await startSubgraph<CartContext>({
     name: "cart",
     resolvers: cartResolvers,
     buildContext(base: SubgraphRequestContext): CartContext {
-      const catalogue = entityCatalogueReader(base.forwarded);
-      const cart = changeCart(carts, catalogue, () => systemClock.now());
+      const liveCatalogue = entityCatalogueReader(base.forwarded);
+      const catalogue = degradedCatalogueReader(liveCatalogue, catalogueBreaker, remembered).reader;
+      const cart = changeCart(carts, liveCatalogue, () => systemClock.now());
       let visitorKey = base.cartCookie;
       return {
         ...base,

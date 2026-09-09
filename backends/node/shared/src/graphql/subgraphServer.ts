@@ -12,6 +12,7 @@ import { originCheckPlugin } from "./originCheckPlugin.js";
 import type { SubgraphRequestContext } from "./requestContext.js";
 import { readCookie } from "../security/cookies.js";
 import { remoteAccessTokenVerifier, type AccessTokenVerifier } from "../security/accessToken.js";
+import { requestTracingMiddleware, startRequestTracing } from "../telemetry/requestTracing.js";
 
 export type GeneratedResolverMap = Readonly<Record<string, unknown>>;
 
@@ -33,6 +34,7 @@ export async function startSubgraph<Context extends SubgraphRequestContext>(
   verifier: AccessTokenVerifier = remoteAccessTokenVerifier()
 ): Promise<RunningSubgraph> {
   const profile = currentProfile();
+  startRequestTracing(definition.name);
   const schema = buildSubgraphSchema([
     {
       typeDefs: parse(readSubgraphSchema(definition.name, profile)),
@@ -41,6 +43,7 @@ export async function startSubgraph<Context extends SubgraphRequestContext>(
   ]);
 
   const application = express();
+  application.use(requestTracingMiddleware(definition.name));
   const httpServer: Server = createServer(application);
 
   const server = new ApolloServer<Context>({

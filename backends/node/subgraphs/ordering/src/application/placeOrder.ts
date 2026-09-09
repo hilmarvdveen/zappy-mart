@@ -4,13 +4,9 @@ import { newIdentifier, notAuthenticated, toContractDateTime, userError } from "
 import type { Order } from "../domain/order.js";
 import { placeOrderFrom } from "../domain/order.js";
 import { orderPlaced } from "../domain/orderPlaced.js";
-import type {
-  CartToOrderReader,
-  OrderPlacedConsumers,
-  OrderRepository,
-  OutboxStore,
-  StockReserver
-} from "./ports.js";
+import type { OutboxNudge } from "./outboxPublisher.js";
+import type { StockReservationSaga } from "./stockReservationSaga.js";
+import type { CartToOrderReader, OrderRepository, OutboxStore } from "./ports.js";
 
 export type PlaceOrderOutcome =
   | { readonly kind: "placed"; readonly order: Order }
@@ -25,8 +21,8 @@ export function placeOrder(
   orders: OrderRepository,
   outbox: OutboxStore,
   carts: CartToOrderReader,
-  stock: StockReserver,
-  consumers: OrderPlacedConsumers,
+  saga: StockReservationSaga,
+  publisher: OutboxNudge,
   now: () => Date
 ): PlaceOrder {
   return {
@@ -36,11 +32,6 @@ export function placeOrder(
       }
       const checkoutKey = idempotencyKey ?? newIdentifier("checkout");
 
-      const alreadyPlaced = await orders.readByIdempotencyKey(checkoutKey, customerId);
-      if (alreadyPlaced !== null) {
-        return { kind: "placed", order: alreadyPlaced };
-      }
-
       const cart = await carts.readOrderableCart();
       if (cart === null || cart.lines.length === 0) {
         return {
@@ -49,59 +40,47 @@ export function placeOrder(
         };
       }
 
-      const reservation = await stock.reserve(
+      const outcome = await saga.withReservedStock(
         checkoutKey,
-        cart.lines.map((line) => ({ productId: line.productId, quantity: line.quantity }))
+        cart.lines.map((line) => ({ productId: line.productId, quantity: line.quantity })),
+        async () =>
+          database.transaction(async () => {
+            const order = placeOrderFrom(
+              newIdentifier("order"),
+              await orders.nextSequenceNumber(),
+              customerId,
+              cart,
+              toContractDateTime(now())
+            );
+            await orders.write(order, checkoutKey);
+            await outbox.write(orderPlaced(order, cart.cartId), now().toISOString());
+            return order;
+          })
       );
-      if (!reservation.reserved) {
-        const refusedLine = cart.lines.find((line) => line.productId === reservation.unavailableProductId);
+
+      if (outcome.kind === "unavailable") {
+        const refusedLine = cart.lines.find((line) => line.productId === outcome.productId);
         return {
           kind: "refused",
           errors: [
             userError(
               "OUT_OF_STOCK",
-              `${refusedLine?.productName ?? reservation.unavailableProductId} has ${
-                reservation.availableStock ?? 0
-              } in stock.`
+              `${refusedLine?.productName ?? outcome.productId} has ${outcome.availableStock ?? 0} in stock.`
             )
           ]
         };
       }
 
-      try {
-        const placed = await database.transaction(async () => {
-          const order = placeOrderFrom(
-            newIdentifier("order"),
-            await orders.nextSequenceNumber(),
-            customerId,
-            cart,
-            toContractDateTime(now())
-          );
-          await orders.write(order, checkoutKey);
-          await outbox.write(orderPlaced(order, cart.cartId));
-          return order;
-        });
-
-        await announce(placed, cart.cartId, consumers);
-        return { kind: "placed", order: placed };
-      } catch (failure) {
-        await stock.release(checkoutKey);
-        throw failure;
-      }
+      await nudgeThePublisher(publisher);
+      return { kind: "placed", order: outcome.value };
     }
   };
 }
 
-async function announce(
-  order: Order,
-  cartId: string,
-  consumers: OrderPlacedConsumers
-): Promise<void> {
-  const event = orderPlaced(order, cartId);
-  await consumers.emptyCart(cartId);
-  await consumers.clearCartPromotion(cartId);
-  if (order.promotionCode !== null) {
-    await consumers.countPromotionUse(order.promotionCode, order.id);
+async function nudgeThePublisher(publisher: OutboxNudge): Promise<void> {
+  try {
+    await publisher.publishDue();
+  } catch {
+    return;
   }
-  await consumers.sendConfirmation(event);
 }

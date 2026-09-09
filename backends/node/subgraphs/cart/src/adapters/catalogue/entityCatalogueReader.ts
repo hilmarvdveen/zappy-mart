@@ -27,15 +27,28 @@ type EntityAnswer = {
   readonly _entities: readonly (ProductEntity | null)[];
 };
 
-export function entityCatalogueReader(forwarded: ForwardedHeaders): CatalogueReader {
-  const loader = new DataLoader<string, CataloguedProduct | null>(async (productIdentifiers) => {
-    const representations = productIdentifiers.map((id) => ({ __typename: "Product", id }));
-    const answer = await askSubgraph<EntityAnswer>(
+export type AskCatalogueForProducts = (
+  representations: readonly Readonly<Record<string, unknown>>[]
+) => Promise<EntityAnswer>;
+
+export function overTheGraph(forwarded: ForwardedHeaders): AskCatalogueForProducts {
+  return (representations) =>
+    askSubgraph<EntityAnswer>(
       "catalogue",
       productsByReferenceDocument,
       { representations },
-      forwarded
+      forwarded,
+      { idempotent: true }
     );
+}
+
+export function entityCatalogueReader(
+  forwarded: ForwardedHeaders,
+  askCatalogue: AskCatalogueForProducts = overTheGraph(forwarded)
+): CatalogueReader {
+  const loader = new DataLoader<string, CataloguedProduct | null>(async (productIdentifiers) => {
+    const representations = productIdentifiers.map((id) => ({ __typename: "Product", id }));
+    const answer = await askCatalogue(representations);
     const found = new Map<string, CataloguedProduct>();
     for (const entity of answer._entities) {
       if (entity !== null) {
@@ -56,10 +69,8 @@ export function entityCatalogueReader(forwarded: ForwardedHeaders): CatalogueRea
     },
 
     async readProducts(productIdentifiers: readonly string[]): Promise<readonly CataloguedProduct[]> {
-      const loaded = await loader.loadMany([...productIdentifiers]);
-      return loaded.filter(
-        (product): product is CataloguedProduct => product !== null && !(product instanceof Error)
-      );
+      const loaded = await Promise.all(productIdentifiers.map((identifier) => loader.load(identifier)));
+      return loaded.filter((product): product is CataloguedProduct => product !== null);
     }
   };
 }

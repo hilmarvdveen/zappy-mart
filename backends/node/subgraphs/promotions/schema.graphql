@@ -67,5 +67,5 @@ type Mutation {
   applyPromotionCode(code: String!): CartPayload!
   removePromotionCode: CartPayload!
   clearCartPromotion(cartId: ID!): Boolean! @inaccessible
-  countPromotionUse(code: String!, orderId: ID!): Boolean! @inaccessible
+  countPromotionUse(code: String!, orderId: ID!, eventId: ID!): Boolean! @inaccessible
 }

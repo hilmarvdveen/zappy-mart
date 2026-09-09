@@ -87,23 +87,54 @@ with many teams, where no single service is allowed to be the gate.
 | Observability | one trace per request across the router and every subgraph, structured logs with the trace id | a slow request found in one trace | the cost of instrumenting everything |
 | CI and delivery | composition checked on every change, the contract diff, per subgraph tests, one Compose file for the whole graph | a schema change that cannot merge if it breaks the supergraph | schema checks against a registry, and what a registry adds |
 
+## Z11b: the named place and the proving test for every topic
+
+Delivered on 9 September 2026. Every topic of the role has one file whose name
+says what it is, one test that proves the behaviour, and a paragraph in
+`backends/node/README.md` that shows the file and states the trade-off. The
+paths are relative to `backends/node`.
+
+| Topic | The place | The proving test |
+|---|---|---|
+| Cache invalidation | `subgraphs/catalogue/src/adapters/persistence/cachedProductRepository.ts` | `subgraphs/catalogue/tests/cachedProductRepository.test.ts` |
+| The stock reservation saga, with its compensation | `subgraphs/ordering/src/application/stockReservationSaga.ts` | `subgraphs/ordering/tests/stockReservationSaga.test.ts` |
+| Request driven against event driven | `subgraphs/promotions/src/application/promotionInteractions.ts` | `subgraphs/promotions/tests/promotionInteractions.test.ts` |
+| Idempotency keys | `subgraphs/ordering/src/application/idempotentPlaceOrder.ts` | `subgraphs/ordering/tests/idempotentPlaceOrder.test.ts` |
+| Retries with backoff, jitter and a budget | `shared/src/http/retryPolicy.ts` | `shared/tests/retryPolicy.test.ts` |
+| The outbox with at least once delivery | `subgraphs/ordering/src/application/outboxPublisher.ts` | `subgraphs/ordering/tests/outboxPublisher.test.ts` |
+| Idempotent consumers, keyed by event id | `shared/src/messaging/handledEventStore.ts` | `subgraphs/promotions/tests/promotionInteractions.test.ts` |
+| The circuit breaker | `shared/src/http/circuitBreaker.ts` | `shared/tests/circuitBreaker.test.ts` |
+| The degraded cart when `catalogue` is down | `subgraphs/cart/src/adapters/catalogue/degradedCatalogueReader.ts` | `router/tests/graph.test.ts`, "the graph when the catalogue subgraph is stopped" |
+| DataLoader batching of the entity reads | `subgraphs/cart/src/adapters/catalogue/entityCatalogueReader.ts` | `subgraphs/cart/tests/entityCatalogueReader.test.ts` |
+| Query plans, in development only | `router/src/queryPlanPlugin.ts` | `router/tests/graph.test.ts`, "reads the query plan and shows one batched catalogue fetch for three cart lines" |
+| One trace per request across the gateway and the subgraphs | `shared/src/telemetry/requestTracing.ts` | `router/tests/graph.test.ts`, "puts the gateway and every subgraph it called on one trace" |
+
+Three notes a reader should carry from that table. The cache is invalidated and
+never updated, because a cache that is quietly wrong is worse than a read that
+is slow. The delivery is at least once, so the one consumer that is not
+idempotent by its nature, the promotion use counter, carries the event id guard.
+And the cart degrades on the read path only, because adding a product needs the
+stock of the moment.
+
 ## Increments
 
 | Item | Work | Done when |
 |---|---|---|
 | Z11a | The five subgraphs, the router, the composed supergraph, the contract diff script, the security model | the conformance runner is green against the router, every subgraph has unit and integration tests, the walk through runs from an empty folder |
-| Z11b | The topics table above, one named place per topic with a test that proves it (the chaos test, the idempotency replay, the outbox crash test, the cache invalidation test) | every row in the table points at a file and a test |
+| Z11b | The topics table above, one named place per topic with a test that proves it (the chaos test, the idempotency replay, the outbox crash test, the cache invalidation test) | done 9 September 2026, the table above points at a file and a test for every row |
 | Z11c | Continuous integration with composition and contract checks, one Compose file for the graph with PostgreSQL and the outbox poller, the OpenTelemetry collector | a change that breaks composition cannot merge |
 
 ## Versions to verify at Z11
 
-`@apollo/subgraph`, Apollo Router (the Rust binary and its `router.yaml`
-schema), Rover, `@graphql-codegen/*` with the typed resolvers plugin,
-DataLoader, the OpenTelemetry JavaScript SDK, a circuit breaker library
-(candidate `opossum`), the PostgreSQL client (`pg` or `postgres`), and
-whether the router's JWT authentication is available outside the paid
-tiers at the time of writing. Apollo Server 5.5.1, Express 5.2.1,
-`graphql` 17.0.2 and Node.js 24 are already in `versions.md`.
+Done, and in `versions.md`: `@apollo/subgraph`, `@apollo/gateway`,
+`@apollo/composition`, `@apollo/federation-internals`, `@apollo/query-planner`,
+`@graphql-codegen/*` with the typed resolvers plugin, DataLoader, `jose`,
+`argon2`, `pg`, the OpenTelemetry JavaScript SDK, and Apollo Router 2.16.3 as
+the version `router/router.yaml` is written for. The circuit breaker is written
+here rather than taken from `opossum`, because it is thirty lines, a reader of
+the tutorial should see the state machine, and the dependency would have to be
+explained anyway. The router's JWT authentication is not used, because
+authentication stays distributed and every subgraph verifies for itself.
 
 ## What the blog takes from it
 

@@ -70,7 +70,9 @@ type PromotionAnswer = {
 export function graphCartReader(forwarded: ForwardedHeaders): CartToOrderReader {
   return {
     async readOrderableCart(): Promise<OrderableCart | null> {
-      const cartAnswer = await askSubgraph<CartAnswer>("cart", currentCartDocument, {}, forwarded);
+      const cartAnswer = await askSubgraph<CartAnswer>("cart", currentCartDocument, {}, forwarded, {
+        idempotent: true
+      });
       const cart = cartAnswer.cart;
       if (cart === null || cart.lines.length === 0) {
         return null;
@@ -82,7 +84,8 @@ export function graphCartReader(forwarded: ForwardedHeaders): CartToOrderReader 
         {
           representations: cart.lines.map((line) => ({ __typename: "Product", id: line.product.id }))
         },
-        forwarded
+        forwarded,
+        { idempotent: true }
       );
       const namedProducts = new Map(
         productsAnswer._entities
@@ -112,7 +115,8 @@ export function graphCartReader(forwarded: ForwardedHeaders): CartToOrderReader 
             }
           ]
         },
-        forwarded
+        forwarded,
+        { idempotent: true }
       );
       const amounts = promotionAnswer._entities[0] ?? null;
 

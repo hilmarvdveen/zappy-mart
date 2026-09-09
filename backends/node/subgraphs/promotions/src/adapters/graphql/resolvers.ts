@@ -9,7 +9,7 @@ export const promotionsResolvers: Resolvers = {
       if (cart === null) {
         return { cart: null, availableStock: null, errors: [] };
       }
-      const outcome = await context.promotions.apply(cart.id, cart.subtotal, args.code);
+      const outcome = await context.interactions.validateOnRequest(cart.id, cart.subtotal, args.code);
       if (outcome.kind === "refused") {
         return { cart, availableStock: null, errors: [...outcome.errors] };
       }
@@ -31,7 +31,7 @@ export const promotionsResolvers: Resolvers = {
     },
 
     async countPromotionUse(_parent, args, context) {
-      return context.promotions.countUse(args.code);
+      return context.interactions.countUseOnEvent(args.eventId, args.code);
     },
 
     async resetSubgraphSeed(_parent, _args, context) {

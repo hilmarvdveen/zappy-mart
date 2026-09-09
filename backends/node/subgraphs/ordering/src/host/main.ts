@@ -7,8 +7,11 @@ import { sqlOutboxStore } from "../adapters/persistence/sqlOutboxStore.js";
 import { graphCartReader } from "../adapters/graph/graphCartReader.js";
 import { graphStockReserver } from "../adapters/graph/graphStockReserver.js";
 import { graphOrderPlacedConsumers } from "../adapters/graph/graphOrderPlacedConsumers.js";
+import { idempotentPlaceOrder, inFlightCheckouts } from "../application/idempotentPlaceOrder.js";
+import { outboxPublisher } from "../application/outboxPublisher.js";
 import { placeOrder } from "../application/placeOrder.js";
 import { readOrders } from "../application/readOrders.js";
+import { stockReservationSaga } from "../application/stockReservationSaga.js";
 import { orderingResolvers } from "../adapters/graphql/resolvers.js";
 import type { OrderingContext } from "../adapters/graphql/context.js";
 
@@ -19,6 +22,14 @@ export async function startOrdering(): Promise<{ url: string; stop(): Promise<vo
   const orderStore = sqlOrderRepository(database);
   const outbox = sqlOutboxStore(database);
   const orders = readOrders(orderStore);
+  const checkoutsBeingPlaced = inFlightCheckouts();
+
+  const publisher = outboxPublisher(
+    outbox,
+    graphOrderPlacedConsumers({ authorization: null, cookie: null }),
+    () => systemClock.now()
+  );
+  publisher.startPolling();
 
   const running = await startSubgraph<OrderingContext>({
     name: "ordering",
@@ -28,14 +39,18 @@ export async function startOrdering(): Promise<{ url: string; stop(): Promise<vo
         ...base,
         orderStore,
         orders,
-        checkout: placeOrder(
-          database,
+        checkout: idempotentPlaceOrder(
+          placeOrder(
+            database,
+            orderStore,
+            outbox,
+            graphCartReader(base.forwarded),
+            stockReservationSaga(graphStockReserver(base.forwarded)),
+            publisher,
+            () => systemClock.now()
+          ),
           orderStore,
-          outbox,
-          graphCartReader(base.forwarded),
-          graphStockReserver(base.forwarded),
-          graphOrderPlacedConsumers(base.forwarded),
-          () => systemClock.now()
+          checkoutsBeingPlaced
         ),
         async resetOwnData(): Promise<void> {
           await orderStore.removeEverything();
@@ -64,6 +79,7 @@ export async function startOrdering(): Promise<{ url: string; stop(): Promise<vo
   return {
     url: running.url,
     async stop(): Promise<void> {
+      publisher.stopPolling();
       await running.stop();
       await database.close();
     }

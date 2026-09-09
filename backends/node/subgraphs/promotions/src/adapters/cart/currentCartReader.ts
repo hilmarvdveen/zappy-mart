@@ -18,7 +18,9 @@ type CartAnswer = {
 export function currentCartReader(forwarded: ForwardedHeaders): CartReader {
   return {
     async readCurrentCart(): Promise<CartReference | null> {
-      const answer = await askSubgraph<CartAnswer>("cart", currentCartDocument, {}, forwarded);
+      const answer = await askSubgraph<CartAnswer>("cart", currentCartDocument, {}, forwarded, {
+        idempotent: true
+      });
       if (answer.cart === null) {
         return null;
       }

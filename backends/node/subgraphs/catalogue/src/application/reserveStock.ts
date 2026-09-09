@@ -1,6 +1,7 @@
 import type { Database } from "@zappy/shared";
 import { reserveAllOrNothing, type StockLine } from "../domain/stockReservation.js";
-import type { ProductRepository, StockReservationStore } from "./ports.js";
+import { productChanged } from "../domain/productChanged.js";
+import type { ProductChangeListener, ProductRepository, StockReservationStore } from "./ports.js";
 
 export type StockReservationAnswer = {
   readonly reserved: boolean;
@@ -17,8 +18,16 @@ export function reserveStock(
   database: Database,
   products: ProductRepository,
   reservations: StockReservationStore,
-  now: () => Date
+  now: () => Date,
+  changeListener: ProductChangeListener
 ): ReserveStock {
+  function announce(productIdentifiers: readonly string[]): void {
+    const moment = now().toISOString();
+    for (const productId of productIdentifiers) {
+      changeListener.productChanged(productChanged(productId, moment));
+    }
+  }
+
   return {
     async reserve(idempotencyKey, lines): Promise<StockReservationAnswer> {
       return database.transaction(async () => {
@@ -46,6 +55,7 @@ export function reserveStock(
           await products.writeStock(product.id, product.stock);
         }
         await reservations.write(idempotencyKey, lines, now().toISOString());
+        announce(outcome.reduced.map((product) => product.id));
         return { reserved: true, unavailableProductId: null, availableStock: null };
       });
     },
@@ -69,6 +79,7 @@ export function reserveStock(
           }
         }
         await reservations.remove(idempotencyKey);
+        announce(reserved.map((line) => line.productId));
         return true;
       });
     }

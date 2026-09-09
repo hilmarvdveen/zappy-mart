@@ -1,6 +1,8 @@
 import {
+  createHandledEventTable,
   currentProfile,
   openDatabaseFor,
+  sqlHandledEventStore,
   startSubgraph,
   systemClock,
   type SubgraphRequestContext
@@ -12,6 +14,7 @@ import {
 } from "../adapters/persistence/sqlPromotionRepository.js";
 import { currentCartReader } from "../adapters/cart/currentCartReader.js";
 import { managePromotions } from "../application/applyPromotionCode.js";
+import { promotionInteractions } from "../application/promotionInteractions.js";
 import { resetPromotionSeed } from "../application/resetSeed.js";
 import { promotionsResolvers } from "../adapters/graphql/resolvers.js";
 import type { PromotionsContext } from "../adapters/graphql/context.js";
@@ -19,11 +22,14 @@ import type { PromotionsContext } from "../adapters/graphql/context.js";
 export async function startPromotions(): Promise<{ url: string; stop(): Promise<void> }> {
   const database = openDatabaseFor("promotions");
   await createPromotionTables(database);
+  await createHandledEventTable(database);
 
   const codes = sqlPromotionCodeRepository(database);
   const applied = sqlAppliedPromotionStore(database);
+  const handledEvents = sqlHandledEventStore(database, () => systemClock.now());
   const promotions = managePromotions(codes, applied, () => systemClock.now());
-  const reloadSeed = resetPromotionSeed(codes, applied);
+  const interactions = promotionInteractions(promotions, handledEvents);
+  const reloadSeed = resetPromotionSeed(codes, applied, handledEvents);
 
   if (currentProfile() === "development" && (await codes.readByCode("WELCOME10")) === null) {
     await reloadSeed();
@@ -36,6 +42,7 @@ export async function startPromotions(): Promise<{ url: string; stop(): Promise<
       return {
         ...base,
         promotions,
+        interactions,
         carts: currentCartReader(base.forwarded),
         resetOwnData: reloadSeed
       };

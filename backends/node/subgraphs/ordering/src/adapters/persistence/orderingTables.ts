@@ -14,7 +14,8 @@ export async function createOrderingTables(database: Database): Promise<void> {
       shipping integer not null,
       total integer not null,
       placed_at text not null,
-      idempotency_key text not null unique
+      idempotency_key text not null,
+      unique (customer_id, idempotency_key)
     )
   `);
   await database.execute(`
@@ -33,7 +34,11 @@ export async function createOrderingTables(database: Database): Promise<void> {
       event_name text not null,
       payload text not null,
       recorded_at text not null,
-      published_at text
+      published_at text,
+      attempts integer not null,
+      next_attempt_at text not null,
+      last_failure text,
+      dead_lettered_at text
     )
   `);
 }

@@ -184,7 +184,7 @@ type Mutation
   applyPromotionCode(code: String!): CartPayload! @join__field(graph: PROMOTIONS)
   removePromotionCode: CartPayload! @join__field(graph: PROMOTIONS)
   clearCartPromotion(cartId: ID!): Boolean! @inaccessible @join__field(graph: PROMOTIONS)
-  countPromotionUse(code: String!, orderId: ID!): Boolean! @inaccessible @join__field(graph: PROMOTIONS)
+  countPromotionUse(code: String!, orderId: ID!, eventId: ID!): Boolean! @inaccessible @join__field(graph: PROMOTIONS)
 }
 
 type Order

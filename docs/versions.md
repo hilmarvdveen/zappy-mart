@@ -83,6 +83,26 @@ the Spring Boot 4.1.1 dependency bill of materials on 8 September 2026.
 | C# backend | .NET SDK 10.0.303 on runtime 10.0.11, `HotChocolate.AspNetCore` 16.6.4 (16.7 still in preview), EF Core 10.0.12 with `.Sqlite` and `.Design` and `Npgsql.EntityFrameworkCore.PostgreSQL` 10.0.3, `Microsoft.AspNetCore.Authentication.JwtBearer` 10.0.12, `Microsoft.IdentityModel.JsonWebTokens` 8.22.0, `Konscious.Security.Cryptography.Argon2` 1.3.1 with Argon2id at 19456 KiB memory, 2 iterations and parallelism 1 from the OWASP password storage baseline, `xunit.v3` 4.0.0 on the Microsoft Testing Platform (so no `Microsoft.NET.Test.Sdk`, `xunit.runner.visualstudio` or `coverlet.collector`, and a `test` section in `global.json`), `Microsoft.AspNetCore.Mvc.Testing` 10.0.12, `dotnet-ef` 10.0.12 as a local tool, `actions/setup-dotnet@v6` in the workflow | verified 9 September 2026 | `dotnet --info`, NuGet, the OWASP cheat sheet, GitHub releases |
 | Apollo Federation, JavaScript | `@apollo/subgraph` 2.15.0, `@apollo/gateway` 2.14.4, `@apollo/composition` 2.14.4 | the gateway serves the composed supergraph in this repository because Norton on the development laptop blocks the Rust `router.exe` that `@apollo/router` downloads (and `rover.exe` from `@apollo/rover` 0.41.0). The same supergraph file runs under Apollo Router unchanged | npm |
 
+## Verified with `npm view <package> version` on 9 September 2026 for item Z11b
+
+The nine topics of the retail role in the federated backend needed one new group
+of packages and one promotion of a package that was already there.
+
+| Item | Version | Notes | Source |
+|---|---|---|---|
+| `@opentelemetry/api` | 1.9.1 | the tracer, the context and the propagator. `@apollo/gateway` 2.14.4 declares the same peer range, so the gateway's own `gateway.request`, `gateway.plan` and `gateway.fetch` spans land in the same provider | npm |
+| `@opentelemetry/sdk-trace-node` | 2.11.0 | `NodeTracerProvider`, which registers the async hooks context manager, so the request span stays active through every await of the request | npm |
+| `@opentelemetry/sdk-trace-base` | 2.11.0 | `SimpleSpanProcessor` and the `SpanExporter` type. The exporter in `shared/src/telemetry/requestTracing.ts` is written here and keeps the last two hundred spans, because `InMemorySpanExporter` grows without a bound and there is no collector on this machine | npm |
+| `@opentelemetry/core` | 2.11.0 | `W3CTraceContextPropagator`, so the `traceparent` header is the one the specification names | npm |
+| `@opentelemetry/resources` | 2.11.0 | `resourceFromAttributes` for the service name. `@apollo/gateway` depends on the 1.30 line, which npm nests under the gateway while the 2.11 line is hoisted, so `shared` resolves 2.11 and the gateway keeps its own | npm |
+| `@opentelemetry/semantic-conventions` | 1.43.0 | `ATTR_SERVICE_NAME`, the one constant this backend takes from it | npm |
+| `@apollo/query-planner` | 2.14.4 | `serializeQueryPlan` and the `PlanNode` types for `router/src/queryPlanPlugin.ts`. It was already inside `@apollo/gateway` at the same version and is now a direct dependency of the `router` workspace, so the import is declared rather than borrowed | npm |
+
+No circuit breaker library was added. `opossum` was the candidate in
+`docs/federation.md` and the breaker is thirty lines of state machine that a
+reader of the tutorial should see, so it lives in
+`shared/src/http/circuitBreaker.ts` with its own test.
+
 ## Verified at the item that first needed it
 
 The rows that stood here (the Argon2 parameters, the Spring Security Argon2 encoder, the .NET runtime patch and the TypeScript 6.0 patch) were verified when their items were built on 9 September 2026 and now live in the rows of those items above.

@@ -6,6 +6,7 @@ import {
   type SubgraphRequestContext
 } from "@zappy/shared";
 import { createCatalogueTables } from "../adapters/persistence/catalogueTables.js";
+import { cachedProductRepository } from "../adapters/persistence/cachedProductRepository.js";
 import { sqlCategoryRepository, sqlProductRepository } from "../adapters/persistence/sqlProductRepository.js";
 import { sqlStockReservationStore } from "../adapters/persistence/sqlStockReservationStore.js";
 import { readCatalogue } from "../application/readCatalogue.js";
@@ -19,15 +20,22 @@ export async function startCatalogue(): Promise<{ url: string; stop(): Promise<v
   const database = openDatabaseFor("catalogue");
   await createCatalogueTables(database);
 
-  const products = sqlProductRepository(database);
+  const storedProducts = sqlProductRepository(database);
+  const cachedProducts = cachedProductRepository(storedProducts, () => systemClock.now());
   const categories = sqlCategoryRepository(database);
   const reservations = sqlStockReservationStore(database);
 
-  const catalogue = readCatalogue(products, categories);
-  const stock = reserveStock(database, products, reservations, () => systemClock.now());
-  const seed = resetSeed(database, products);
+  const catalogue = readCatalogue(cachedProducts.repository, categories);
+  const stock = reserveStock(
+    database,
+    storedProducts,
+    reservations,
+    () => systemClock.now(),
+    cachedProducts.listener
+  );
+  const seed = resetSeed(database, cachedProducts.repository);
 
-  if (currentProfile() === "development" && (await products.readAllInCatalogueOrder()).length === 0) {
+  if (currentProfile() === "development" && (await storedProducts.readAllInCatalogueOrder()).length === 0) {
     await seed.resetOwnData();
   }
 
@@ -40,12 +48,12 @@ export async function startCatalogue(): Promise<{ url: string; stop(): Promise<v
         catalogue,
         stock,
         seed,
-        productByIdentifier: productLoader(products),
+        productByIdentifier: productLoader(cachedProducts.repository),
         categoryBySlug: categoryLoader(categories)
       };
     },
     async isReady(): Promise<boolean> {
-      return (await products.readAllInCatalogueOrder()).length > 0;
+      return (await storedProducts.readAllInCatalogueOrder()).length > 0;
     }
   });
 

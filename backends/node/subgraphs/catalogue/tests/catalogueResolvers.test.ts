@@ -27,7 +27,13 @@ before(async () => {
   context = {
     ...anonymousContext(),
     catalogue: readCatalogue(products, categories),
-    stock: reserveStock(database, products, sqlStockReservationStore(database), () => systemClock.now()),
+    stock: reserveStock(
+      database,
+      products,
+      sqlStockReservationStore(database),
+      () => systemClock.now(),
+      { productChanged(): void {} }
+    ),
     seed,
     productByIdentifier: productLoader(products),
     categoryBySlug: categoryLoader(categories)

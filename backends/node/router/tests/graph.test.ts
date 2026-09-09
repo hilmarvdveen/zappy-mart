@@ -17,11 +17,15 @@ const { startOrdering } = await import("@zappy/ordering");
 const { startAccounts } = await import("@zappy/accounts");
 const { startGateway } = await import("../src/host/main.js");
 const { graphClient } = await import("./graphClient.js");
+const { queryPlanExtensionName, queryPlanHeaderName } = await import("../src/queryPlanPlugin.js");
+const { forgetRecordedSpans, recordedSpans } = await import("@zappy/shared");
 
 type RunningPart = { stop(): Promise<void> };
 
 const running: RunningPart[] = [];
 const client = graphClient("http://localhost:4100/graphql");
+
+let catalogue: RunningPart | null = null;
 
 const cartFields = `
   cart {
@@ -44,7 +48,8 @@ async function resetSeed(): Promise<void> {
 
 before(async () => {
   running.push(await startAccounts());
-  running.push(await startCatalogue());
+  catalogue = await startCatalogue();
+  running.push(catalogue);
   running.push(await startCart());
   running.push(await startPromotions());
   running.push(await startOrdering());
@@ -638,6 +643,66 @@ describe("the federated graph", () => {
     client.useAccessToken(null);
   });
 
+  it("reads the query plan and shows one batched catalogue fetch for three cart lines", async () => {
+    await resetSeed();
+    client.forgetCookies();
+    client.useAccessToken(null);
+    for (const productId of ["product-18", "product-03", "product-05"]) {
+      await client.ask(
+        "mutation Add($productId: ID!) { addToCart(productId: $productId, quantity: 1) { errors { code } } }",
+        { productId }
+      );
+    }
+
+    const answer = await client.askWithExtraHeaders(
+      "{ cart { id lines { quantity product { id name price { amount } } } } }",
+      {},
+      { [queryPlanHeaderName]: "1" }
+    );
+
+    assert.deepEqual(answer.errors, []);
+    const summary = answer.extensions[queryPlanExtensionName] as {
+      plan: string;
+      fetchesPerSubgraph: Record<string, number>;
+    };
+    assert.deepEqual(summary.fetchesPerSubgraph, { cart: 1, catalogue: 1 });
+    assert.match(summary.plan, /Fetch\(service: "cart"\)/);
+    assert.match(summary.plan, /Fetch\(service: "catalogue"\)/);
+    assert.equal((summary.plan.match(/Fetch\(service: "catalogue"\)/g) ?? []).length, 1);
+
+    const lines = (answer.data?.["cart"] as { lines: readonly { product: { name: string } }[] }).lines;
+    assert.equal(lines.length, 3);
+    assert.ok(lines.every((line) => line.product.name.length > 0));
+  });
+
+  it("hides the query plan from a request that did not ask for it", async () => {
+    const answer = await client.ask("{ cart { id } }");
+    assert.equal(answer.extensions[queryPlanExtensionName], undefined);
+  });
+
+  it("puts the gateway and every subgraph it called on one trace", async () => {
+    await resetSeed();
+    client.forgetCookies();
+    client.useAccessToken(null);
+    await client.ask(
+      'mutation { addToCart(productId: "product-18", quantity: 1) { errors { code } } }'
+    );
+
+    forgetRecordedSpans();
+    const answer = await client.ask("{ cart { id lines { quantity product { id name } } } }");
+    assert.deepEqual(answer.errors, []);
+
+    const spans = recordedSpans();
+    const gatewaySpan = spans.find((span) => span.service === "gateway");
+    assert.ok(gatewaySpan !== undefined);
+    const onTheSameTrace = spans.filter((span) => span.traceId === gatewaySpan.traceId);
+    const services = new Set(onTheSameTrace.map((span) => span.service));
+    assert.ok(services.has("gateway"));
+    assert.ok(services.has("cart"));
+    assert.ok(services.has("catalogue"));
+    assert.equal(new Set(onTheSameTrace.map((span) => span.traceId)).size, 1);
+  });
+
   it("stops accepting an access token the moment the customer logs out", async () => {
     await resetSeed();
     client.forgetCookies();
@@ -654,6 +719,59 @@ describe("the federated graph", () => {
     const afterLogout = await client.ask("{ me { email } }");
     assert.equal(afterLogout.data?.["me"], null);
     client.useAccessToken(null);
+  });
+});
+
+describe("the graph when the catalogue subgraph is stopped", () => {
+  const cartWithItsSubtotal = "{ cart { id lines { id quantity } subtotal { amount currency } } }";
+
+  it("prices the cart from the live catalogue while it is up", async () => {
+    await resetSeed();
+    client.forgetCookies();
+    client.useAccessToken(null);
+    const added = await client.ask(
+      'mutation { addToCart(productId: "product-18", quantity: 2) { errors { code } } }'
+    );
+    assert.deepEqual((added.data?.["addToCart"] as { errors: readonly unknown[] }).errors, []);
+
+    const priced = await client.ask(cartWithItsSubtotal);
+    assert.deepEqual(priced.errors, []);
+    assert.equal((priced.data?.["cart"] as { subtotal: { amount: number } }).subtotal.amount, 1970);
+  });
+
+  it("still answers the cart with its subtotal after the catalogue is stopped", async () => {
+    const stoppedCatalogue = catalogue;
+    assert.ok(stoppedCatalogue !== null);
+    running.splice(running.indexOf(stoppedCatalogue), 1);
+    await stoppedCatalogue.stop();
+    catalogue = null;
+
+    const answer = await client.ask(cartWithItsSubtotal);
+
+    assert.deepEqual(answer.errors, []);
+    const degraded = answer.data?.["cart"] as {
+      lines: readonly { quantity: number }[];
+      subtotal: { amount: number; currency: string };
+    };
+    assert.equal(degraded.lines.length, 1);
+    assert.equal(degraded.lines[0]?.quantity, 2);
+    assert.deepEqual(degraded.subtotal, { amount: 1970, currency: "EUR" });
+  });
+
+  it("keeps answering while the catalogue stays down, because the circuit is open", async () => {
+    for (let repeat = 0; repeat < 5; repeat = repeat + 1) {
+      const answer = await client.ask(cartWithItsSubtotal);
+      assert.deepEqual(answer.errors, []);
+      assert.equal((answer.data?.["cart"] as { subtotal: { amount: number } }).subtotal.amount, 1970);
+    }
+  });
+
+  it("refuses to add a product while the catalogue is down, because adding needs the stock of the moment", async () => {
+    const added = await client.ask(
+      'mutation { addToCart(productId: "product-03", quantity: 1) { errors { code } } }'
+    );
+    assert.equal(added.errors.length, 1);
+    assert.match(added.errors[0]?.message ?? "", /catalogue/);
   });
 });
 

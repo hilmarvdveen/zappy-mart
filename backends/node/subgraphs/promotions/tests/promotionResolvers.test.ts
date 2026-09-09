@@ -1,7 +1,13 @@
 import { after, before, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { Database } from "@zappy/shared";
-import { money, openInMemoryDatabase, systemClock } from "@zappy/shared";
+import {
+  createHandledEventTable,
+  money,
+  openInMemoryDatabase,
+  sqlHandledEventStore,
+  systemClock
+} from "@zappy/shared";
 import { anonymousContext, buildTestSchema, runOperation } from "@zappy/shared/testing";
 import { createPromotionTables } from "../src/adapters/persistence/promotionTables.js";
 import {
@@ -9,6 +15,7 @@ import {
   sqlPromotionCodeRepository
 } from "../src/adapters/persistence/sqlPromotionRepository.js";
 import { managePromotions } from "../src/application/applyPromotionCode.js";
+import { promotionInteractions } from "../src/application/promotionInteractions.js";
 import { resetPromotionSeed } from "../src/application/resetSeed.js";
 import type { CartReader, CartReference } from "../src/application/ports.js";
 import { promotionsResolvers } from "../src/adapters/graphql/resolvers.js";
@@ -30,17 +37,21 @@ const cartPayloadFields = "cart { id } availableStock errors { code message fiel
 before(async () => {
   database = openInMemoryDatabase();
   await createPromotionTables(database);
+  await createHandledEventTable(database);
 });
 
 beforeEach(async () => {
   const codes = sqlPromotionCodeRepository(database);
   const applied = sqlAppliedPromotionStore(database);
-  const reloadSeed = resetPromotionSeed(codes, applied);
+  const handledEvents = sqlHandledEventStore(database, () => systemClock.now());
+  const reloadSeed = resetPromotionSeed(codes, applied, handledEvents);
   await reloadSeed();
   currentCart = { id: "cart-01", subtotal: money(1970) };
+  const promotions = managePromotions(codes, applied, () => systemClock.now());
   context = {
     ...anonymousContext(),
-    promotions: managePromotions(codes, applied, () => systemClock.now()),
+    promotions,
+    interactions: promotionInteractions(promotions, handledEvents),
     carts: fixedCartReader,
     resetOwnData: reloadSeed
   };
@@ -171,7 +182,7 @@ describe("the promotions subgraph", () => {
     const codes = sqlPromotionCodeRepository(database);
     const counted = await runOperation(
       schema,
-      'mutation { countPromotionUse(code: "welcome10", orderId: "order-01") }',
+      'mutation { countPromotionUse(code: "welcome10", orderId: "order-01", eventId: "outbox-01") }',
       {},
       context
     );
@@ -180,7 +191,7 @@ describe("the promotions subgraph", () => {
 
     const unknown = await runOperation(
       schema,
-      'mutation { countPromotionUse(code: "NOSUCHCODE", orderId: "order-01") }',
+      'mutation { countPromotionUse(code: "NOSUCHCODE", orderId: "order-02", eventId: "outbox-02") }',
       {},
       context
     );

@@ -1,4 +1,5 @@
 import type { Category, Product } from "../domain/product.js";
+import type { ProductChanged } from "../domain/productChanged.js";
 import type { StockLine } from "../domain/stockReservation.js";
 
 export type ProductRepository = {
@@ -18,4 +19,8 @@ export type StockReservationStore = {
   readByIdempotencyKey(idempotencyKey: string): Promise<readonly StockLine[] | null>;
   write(idempotencyKey: string, lines: readonly StockLine[], recordedAt: string): Promise<void>;
   remove(idempotencyKey: string): Promise<void>;
+};
+
+export type ProductChangeListener = {
+  productChanged(event: ProductChanged): void;
 };

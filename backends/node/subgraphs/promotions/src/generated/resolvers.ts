@@ -60,6 +60,7 @@ export type MutationclearCartPromotionArgs = {
 
 export type MutationcountPromotionUseArgs = {
   code: Scalars['String']['input'];
+  eventId: Scalars['ID']['input'];
   orderId: Scalars['ID']['input'];
 };
 
@@ -257,7 +258,7 @@ export type MoneyResolvers<ContextType = PromotionsContext, ParentType extends R
 export type MutationResolvers<ContextType = PromotionsContext, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = {
   applyPromotionCode?: Resolver<ResolversTypes['CartPayload'], ParentType, ContextType, RequireFields<MutationapplyPromotionCodeArgs, 'code'>>;
   clearCartPromotion?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationclearCartPromotionArgs, 'cartId'>>;
-  countPromotionUse?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationcountPromotionUseArgs, 'code' | 'orderId'>>;
+  countPromotionUse?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationcountPromotionUseArgs, 'code' | 'eventId' | 'orderId'>>;
   removePromotionCode?: Resolver<ResolversTypes['CartPayload'], ParentType, ContextType>;
   resetSubgraphSeed?: Resolver<ResolversTypes['ResetSeedPayload'], ParentType, ContextType>;
 };

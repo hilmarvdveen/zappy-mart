@@ -16,8 +16,8 @@ const clearCartPromotionDocument = `
 `;
 
 const countPromotionUseDocument = `
-  mutation CountPromotionUse($code: String!, $orderId: ID!) {
-    countPromotionUse(code: $code, orderId: $orderId)
+  mutation CountPromotionUse($code: String!, $orderId: ID!, $eventId: ID!) {
+    countPromotionUse(code: $code, orderId: $orderId, eventId: $eventId)
   }
 `;
 
@@ -63,15 +63,19 @@ export function graphOrderPlacedConsumers(
 ): OrderPlacedConsumers {
   return {
     async emptyCart(cartId: string): Promise<void> {
-      await askSubgraph("cart", emptyCartDocument, { cartId }, forwarded);
+      await askSubgraph("cart", emptyCartDocument, { cartId }, forwarded, { idempotent: true });
     },
 
     async clearCartPromotion(cartId: string): Promise<void> {
-      await askSubgraph("promotions", clearCartPromotionDocument, { cartId }, forwarded);
+      await askSubgraph("promotions", clearCartPromotionDocument, { cartId }, forwarded, {
+        idempotent: true
+      });
     },
 
-    async countPromotionUse(code: string, orderId: string): Promise<void> {
-      await askSubgraph("promotions", countPromotionUseDocument, { code, orderId }, forwarded);
+    async countPromotionUse(code: string, orderId: string, eventId: string): Promise<void> {
+      await askSubgraph("promotions", countPromotionUseDocument, { code, orderId, eventId }, forwarded, {
+        idempotent: true
+      });
     },
 
     async sendConfirmation(event: OrderPlaced): Promise<void> {
@@ -79,7 +83,8 @@ export function graphOrderPlacedConsumers(
         "accounts",
         customerByReferenceDocument,
         { representations: [{ __typename: "Customer", id: event.customerId }] },
-        forwarded
+        forwarded,
+        { idempotent: true }
       );
       const customer = answer._entities[0] ?? null;
       if (customer === null) {
